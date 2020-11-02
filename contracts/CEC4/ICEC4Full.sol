@@ -1,13 +1,13 @@
 pragma solidity ^0.4.24;
 
-import "./IERC721.sol";
-import "./IERC721Enumerable.sol";
-import "./IERC721Metadata.sol";
+import "./ICEC4.sol";
+import "./ICEC4Enumerable.sol";
+import "./ICEC4Metadata.sol";
 
 /**
  * @title ERC-721 Non-Fungible Token Standard, full implementation interface
  * @dev See https://eips.ethereum.org/EIPS/eip-721
  */
-contract IERC721Full is IERC721, IERC721Enumerable, IERC721Metadata {
+contract ICEC4Full is ICEC4, ICEC4Enumerable, ICEC4Metadata {
     // solhint-disable-previous-line no-empty-blocks
 }

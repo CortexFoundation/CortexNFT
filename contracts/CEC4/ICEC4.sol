@@ -1,11 +1,11 @@
 pragma solidity ^0.4.24;
 
-import "../utils/IERC165.sol";
+import "../utils/ICEC3.sol";
 
 /**
- * @dev Required interface of an ERC721 compliant contract.
+ * @dev Required interface of an CEC4 compliant contract.
  */
-contract IERC721 is IERC165 {
+contract ICEC4 is ICEC3 {
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
     event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
     event ApprovalForAll(address indexed owner, address indexed operator, bool approved);

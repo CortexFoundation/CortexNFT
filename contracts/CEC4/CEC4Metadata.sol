@@ -1,10 +1,10 @@
 pragma solidity ^0.4.24;
 
-import "./ERC721.sol";
-import "./IERC721Metadata.sol";
-import "../utils/ERC165.sol";
+import "./CEC4.sol";
+import "./ICEC4Metadata.sol";
+import "../utils/CEC3.sol";
 
-contract ERC721Metadata is ERC165, ERC721, IERC721Metadata {
+contract CEC4Metadata is CEC3, CEC4, ICEC4Metadata {
     // Token name
     string private _name;
 
@@ -21,7 +21,7 @@ contract ERC721Metadata is ERC165, ERC721, IERC721Metadata {
      *
      *     => 0x06fdde03 ^ 0x95d89b41 ^ 0xc87b56dd == 0x5b5e139f
      */
-    bytes4 private constant _INTERFACE_ID_ERC721_METADATA = 0x5b5e139f;
+    bytes4 private constant _INTERFACE_ID_CEC4_METADATA = 0x5b5e139f;
 
     /**
      * @dev Constructor function
@@ -30,8 +30,8 @@ contract ERC721Metadata is ERC165, ERC721, IERC721Metadata {
         _name = name;
         _symbol = symbol;
 
-        // register the supported interfaces to conform to ERC721 via ERC165
-        _registerInterface(_INTERFACE_ID_ERC721_METADATA);
+        // register the supported interfaces to conform to CEC4 via CEC3
+        _registerInterface(_INTERFACE_ID_CEC4_METADATA);
     }
 
     /**
@@ -56,7 +56,7 @@ contract ERC721Metadata is ERC165, ERC721, IERC721Metadata {
      * @param tokenId uint256 ID of the token to query
      */
     function tokenURI(uint256 tokenId) external view returns (string memory) {
-        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+        require(_exists(tokenId), "CEC4Metadata: URI query for nonexistent token");
         return _tokenURIs[tokenId];
     }
 
@@ -67,7 +67,7 @@ contract ERC721Metadata is ERC165, ERC721, IERC721Metadata {
      * @param uri string URI to assign
      */
     function _setTokenURI(uint256 tokenId, string memory uri) internal {
-        require(_exists(tokenId), "ERC721Metadata: URI set of nonexistent token");
+        require(_exists(tokenId), "CEC4Metadata: URI set of nonexistent token");
         _tokenURIs[tokenId] = uri;
     }
 

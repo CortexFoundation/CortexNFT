@@ -1,13 +1,13 @@
 pragma solidity ^0.4.24;
 
-import "./ERC721.sol";
+import "./CEC4.sol";
 import "../utils/MinterRole.sol";
 
 /**
- * @title ERC721Mintable
- * @dev ERC721 minting logic.
+ * @title CEC4Mintable
+ * @dev CEC4 minting logic.
  */
-contract ERC721Mintable is ERC721, MinterRole {
+contract CEC4Mintable is CEC4, MinterRole {
     /**
      * @dev Function to mint tokens.
      * @param to The address that will receive the minted tokens.
