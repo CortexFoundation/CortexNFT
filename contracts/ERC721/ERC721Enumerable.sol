@@ -2,7 +2,7 @@ pragma solidity ^0.4.24;
 
 import "./IERC721Enumerable.sol";
 import "./ERC721.sol";
-import "../../introspection/ERC165.sol";
+import "../utils/ERC165.sol";
 
 /**
  * @title ERC-721 Non-Fungible Token with optional enumeration extension logic
