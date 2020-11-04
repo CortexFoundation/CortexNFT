@@ -10,13 +10,24 @@ contract Artwork is CRC4Full {
     constructor() CRC4Full("ARTWORK", "AW") public {
     }
 
-    function addItem(address creator, string memory tokenURI) public returns (uint256) {
+    function addItem(address _owner, string memory _tokenURI) public returns (uint256) {
         _tokenIds.increment();
 
         uint256 newItemId = _tokenIds.current();
-        _mint(creator, newItemId);
-        _setTokenURI(newItemId, tokenURI);
+        _mint(_owner, newItemId);
+        _setTokenURI(newItemId, _tokenURI);
 
         return newItemId;
+    }
+
+    function addItems(address _owner, string memory _tokenURI, uint _numberOfItems) public {
+        uint256 newItemId;
+        for(uint i = 0; i < _numberOfItems; ++i) {
+            _tokenIds.increment();
+
+            newItemId = _tokenIds.current();
+            _mint(_owner, newItemId);
+            _setTokenURI(newItemId, _tokenURI);
+        }
     }
 }
