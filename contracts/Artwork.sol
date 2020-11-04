@@ -3,7 +3,7 @@ pragma solidity ^0.4.24;
 import "./CEC4/CEC4Full.sol";
 import "./utils/Counters.sol";
 
-contract artwork is CEC4Full {
+contract Artwork is CEC4Full {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
