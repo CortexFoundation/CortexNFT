@@ -1,15 +1,15 @@
 pragma solidity ^0.4.24;
 
 /**
- * @dev Interface of the CEC3 standard, as defined in the
+ * @dev Interface of the CRC3 standard, as defined in the
  * [EIP](https://eips.ethereum.org/EIPS/eip-165).
  *
  * Implementers can declare support of contract interfaces, which can then be
- * queried by others (`CEC3Checker`).
+ * queried by others (`CRC3Checker`).
  *
- * For an implementation, see `CEC3`.
+ * For an implementation, see `CRC3`.
  */
-interface ICEC3 {
+interface ICRC3 {
     /**
      * @dev Returns true if this contract implements the interface defined by
      * `interfaceId`. See the corresponding

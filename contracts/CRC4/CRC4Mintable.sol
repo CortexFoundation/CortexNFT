@@ -1,13 +1,13 @@
 pragma solidity ^0.4.24;
 
-import "./CEC4.sol";
+import "./CRC4.sol";
 import "../utils/MinterRole.sol";
 
 /**
- * @title CEC4Mintable
- * @dev CEC4 minting logic.
+ * @title CRC4Mintable
+ * @dev CRC4 minting logic.
  */
-contract CEC4Mintable is CEC4, MinterRole {
+contract CRC4Mintable is CRC4, MinterRole {
     /**
      * @dev Function to mint tokens.
      * @param to The address that will receive the minted tokens.

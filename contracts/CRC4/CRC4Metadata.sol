@@ -1,10 +1,10 @@
 pragma solidity ^0.4.24;
 
-import "./CEC4.sol";
-import "./ICEC4Metadata.sol";
-import "../utils/CEC3.sol";
+import "./CRC4.sol";
+import "./ICRC4Metadata.sol";
+import "../utils/CRC3.sol";
 
-contract CEC4Metadata is CEC3, CEC4, ICEC4Metadata {
+contract CRC4Metadata is CRC3, CRC4, ICRC4Metadata {
     // Token name
     string private _name;
 
@@ -21,7 +21,7 @@ contract CEC4Metadata is CEC3, CEC4, ICEC4Metadata {
      *
      *     => 0x06fdde03 ^ 0x95d89b41 ^ 0xc87b56dd == 0x5b5e139f
      */
-    bytes4 private constant _INTERFACE_ID_CEC4_METADATA = 0x5b5e139f;
+    bytes4 private constant _INTERFACE_ID_CRC4_METADATA = 0x5b5e139f;
 
     /**
      * @dev Constructor function
@@ -30,8 +30,8 @@ contract CEC4Metadata is CEC3, CEC4, ICEC4Metadata {
         _name = name;
         _symbol = symbol;
 
-        // register the supported interfaces to conform to CEC4 via CEC3
-        _registerInterface(_INTERFACE_ID_CEC4_METADATA);
+        // register the supported interfaces to conform to CRC4 via CRC3
+        _registerInterface(_INTERFACE_ID_CRC4_METADATA);
     }
 
     /**
@@ -56,7 +56,7 @@ contract CEC4Metadata is CEC3, CEC4, ICEC4Metadata {
      * @param tokenId uint256 ID of the token to query
      */
     function tokenURI(uint256 tokenId) external view returns (string memory) {
-        require(_exists(tokenId), "CEC4Metadata: URI query for nonexistent token");
+        require(_exists(tokenId), "CRC4Metadata: URI query for nonexistent token");
         return _tokenURIs[tokenId];
     }
 
@@ -67,7 +67,7 @@ contract CEC4Metadata is CEC3, CEC4, ICEC4Metadata {
      * @param uri string URI to assign
      */
     function _setTokenURI(uint256 tokenId, string memory uri) internal {
-        require(_exists(tokenId), "CEC4Metadata: URI set of nonexistent token");
+        require(_exists(tokenId), "CRC4Metadata: URI set of nonexistent token");
         _tokenURIs[tokenId] = uri;
     }
 

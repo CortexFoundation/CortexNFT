@@ -1,11 +1,11 @@
 pragma solidity ^0.4.24;
 
-import "../utils/ICEC3.sol";
+import "../utils/ICRC3.sol";
 
 /**
- * @dev Required interface of an CEC4 compliant contract.
+ * @dev Required interface of an CRC4 compliant contract.
  */
-contract ICEC4 is ICEC3 {
+contract ICRC4 is ICRC3 {
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
     event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
     event ApprovalForAll(address indexed owner, address indexed operator, bool approved);

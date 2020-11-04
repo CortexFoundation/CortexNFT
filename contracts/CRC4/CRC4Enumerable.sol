@@ -1,14 +1,14 @@
 pragma solidity ^0.4.24;
 
-import "./ICEC4Enumerable.sol";
-import "./CEC4.sol";
-import "../utils/CEC3.sol";
+import "./ICRC4Enumerable.sol";
+import "./CRC4.sol";
+import "../utils/CRC3.sol";
 
 /**
  * @title ERC-721 Non-Fungible Token with optional enumeration extension logic
  * @dev See https://eips.ethereum.org/EIPS/eip-721
  */
-contract CEC4Enumerable is CEC3, CEC4, ICEC4Enumerable {
+contract CRC4Enumerable is CRC3, CRC4, ICRC4Enumerable {
     // Mapping from owner to list of owned token IDs
     mapping(address => uint256[]) private _ownedTokens;
 
@@ -28,14 +28,14 @@ contract CEC4Enumerable is CEC3, CEC4, ICEC4Enumerable {
      *
      *     => 0x18160ddd ^ 0x2f745c59 ^ 0x4f6ccce7 == 0x780e9d63
      */
-    bytes4 private constant _INTERFACE_ID_CEC4_ENUMERABLE = 0x780e9d63;
+    bytes4 private constant _INTERFACE_ID_CRC4_ENUMERABLE = 0x780e9d63;
 
     /**
      * @dev Constructor function.
      */
     constructor () public {
-        // register the supported interface to conform to CEC4Enumerable via CEC3
-        _registerInterface(_INTERFACE_ID_CEC4_ENUMERABLE);
+        // register the supported interface to conform to CRC4Enumerable via CRC3
+        _registerInterface(_INTERFACE_ID_CRC4_ENUMERABLE);
     }
 
     /**
@@ -45,7 +45,7 @@ contract CEC4Enumerable is CEC3, CEC4, ICEC4Enumerable {
      * @return uint256 token ID at the given index of the tokens list owned by the requested address
      */
     function tokenOfOwnerByIndex(address owner, uint256 index) public view returns (uint256) {
-        require(index < balanceOf(owner), "CEC4Enumerable: owner index out of bounds");
+        require(index < balanceOf(owner), "CRC4Enumerable: owner index out of bounds");
         return _ownedTokens[owner][index];
     }
 
@@ -64,7 +64,7 @@ contract CEC4Enumerable is CEC3, CEC4, ICEC4Enumerable {
      * @return uint256 token ID at the given index of the tokens list
      */
     function tokenByIndex(uint256 index) public view returns (uint256) {
-        require(index < totalSupply(), "CEC4Enumerable: global index out of bounds");
+        require(index < totalSupply(), "CRC4Enumerable: global index out of bounds");
         return _allTokens[index];
     }
 

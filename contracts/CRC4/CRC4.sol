@@ -1,24 +1,24 @@
 pragma solidity ^0.4.24;
 
-import "./ICEC4.sol";
-import "./ICEC4Receiver.sol";
+import "./ICRC4.sol";
+import "./ICRC4Receiver.sol";
 import "../utils/SafeMath.sol";
 import "../utils/Address.sol";
 import "../utils/Counters.sol";
-import "../utils/CEC3.sol";
+import "../utils/CRC3.sol";
 
 /**
- * @title CEC4 Non-Fungible Token Standard basic implementation
+ * @title CRC4 Non-Fungible Token Standard basic implementation
  * @dev see https://eips.ethereum.org/EIPS/eip-721
  */
-contract CEC4 is CEC3, ICEC4 {
+contract CRC4 is CRC3, ICRC4 {
     using SafeMath for uint256;
     using Address for address;
     using Counters for Counters.Counter;
 
-    // Equals to `bytes4(keccak256("onCEC4Received(address,address,uint256,bytes)"))`
-    // which can be also obtained as `ICEC4Receiver(0).onCEC4Received.selector`
-    bytes4 private constant _CEC4_RECEIVED = 0x150b7a02;
+    // Equals to `bytes4(keccak256("onCRC4Received(address,address,uint256,bytes)"))`
+    // which can be also obtained as `ICRC4Receiver(0).onCRC4Received.selector`
+    bytes4 private constant _CRC4_RECEIVED = 0x150b7a02;
 
     // Mapping from token ID to owner
     mapping (uint256 => address) private _tokenOwner;
@@ -46,11 +46,11 @@ contract CEC4 is CEC3, ICEC4 {
      *     => 0x70a08231 ^ 0x6352211e ^ 0x095ea7b3 ^ 0x081812fc ^
      *        0xa22cb465 ^ 0xe985e9c ^ 0x23b872dd ^ 0x42842e0e ^ 0xb88d4fde == 0x80ac58cd
      */
-    bytes4 private constant _INTERFACE_ID_CEC4 = 0x80ac58cd;
+    bytes4 private constant _INTERFACE_ID_CRC4 = 0x80ac58cd;
 
     constructor () public {
-        // register the supported interfaces to conform to CEC4 via CEC3
-        _registerInterface(_INTERFACE_ID_CEC4);
+        // register the supported interfaces to conform to CRC4 via CRC3
+        _registerInterface(_INTERFACE_ID_CRC4);
     }
 
     /**
@@ -59,7 +59,7 @@ contract CEC4 is CEC3, ICEC4 {
      * @return uint256 representing the amount owned by the passed address
      */
     function balanceOf(address owner) public view returns (uint256) {
-        require(owner != address(0), "CEC4: balance query for the zero address");
+        require(owner != address(0), "CRC4: balance query for the zero address");
 
         return _ownedTokensCount[owner].current();
     }
@@ -71,7 +71,7 @@ contract CEC4 is CEC3, ICEC4 {
      */
     function ownerOf(uint256 tokenId) public view returns (address) {
         address owner = _tokenOwner[tokenId];
-        require(owner != address(0), "CEC4: owner query for nonexistent token");
+        require(owner != address(0), "CRC4: owner query for nonexistent token");
 
         return owner;
     }
@@ -86,10 +86,10 @@ contract CEC4 is CEC3, ICEC4 {
      */
     function approve(address to, uint256 tokenId) public {
         address owner = ownerOf(tokenId);
-        require(to != owner, "CEC4: approval to current owner");
+        require(to != owner, "CRC4: approval to current owner");
 
         require(msg.sender == owner || isApprovedForAll(owner, msg.sender),
-            "CEC4: approve caller is not owner nor approved for all"
+            "CRC4: approve caller is not owner nor approved for all"
         );
 
         _tokenApprovals[tokenId] = to;
@@ -103,7 +103,7 @@ contract CEC4 is CEC3, ICEC4 {
      * @return address currently approved for the given token ID
      */
     function getApproved(uint256 tokenId) public view returns (address) {
-        require(_exists(tokenId), "CEC4: approved query for nonexistent token");
+        require(_exists(tokenId), "CRC4: approved query for nonexistent token");
 
         return _tokenApprovals[tokenId];
     }
@@ -115,7 +115,7 @@ contract CEC4 is CEC3, ICEC4 {
      * @param approved representing the status of the approval to be set
      */
     function setApprovalForAll(address to, bool approved) public {
-        require(to != msg.sender, "CEC4: approve to caller");
+        require(to != msg.sender, "CRC4: approve to caller");
 
         _operatorApprovals[msg.sender][to] = approved;
         emit ApprovalForAll(msg.sender, to, approved);
@@ -141,16 +141,16 @@ contract CEC4 is CEC3, ICEC4 {
      */
     function transferFrom(address from, address to, uint256 tokenId) public {
         //solhint-disable-next-line max-line-length
-        require(_isApprovedOrOwner(msg.sender, tokenId), "CEC4: transfer caller is not owner nor approved");
+        require(_isApprovedOrOwner(msg.sender, tokenId), "CRC4: transfer caller is not owner nor approved");
 
         _transferFrom(from, to, tokenId);
     }
 
     /**
      * @dev Safely transfers the ownership of a given token ID to another address
-     * If the target address is a contract, it must implement `onCEC4Received`,
+     * If the target address is a contract, it must implement `onCRC4Received`,
      * which is called upon a safe transfer, and return the magic value
-     * `bytes4(keccak256("onCEC4Received(address,address,uint256,bytes)"))`; otherwise,
+     * `bytes4(keccak256("onCRC4Received(address,address,uint256,bytes)"))`; otherwise,
      * the transfer is reverted.
      * Requires the msg.sender to be the owner, approved, or operator
      * @param from current owner of the token
@@ -163,9 +163,9 @@ contract CEC4 is CEC3, ICEC4 {
 
     /**
      * @dev Safely transfers the ownership of a given token ID to another address
-     * If the target address is a contract, it must implement `onCEC4Received`,
+     * If the target address is a contract, it must implement `onCRC4Received`,
      * which is called upon a safe transfer, and return the magic value
-     * `bytes4(keccak256("onCEC4Received(address,address,uint256,bytes)"))`; otherwise,
+     * `bytes4(keccak256("onCRC4Received(address,address,uint256,bytes)"))`; otherwise,
      * the transfer is reverted.
      * Requires the msg.sender to be the owner, approved, or operator
      * @param from current owner of the token
@@ -175,7 +175,7 @@ contract CEC4 is CEC3, ICEC4 {
      */
     function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) public {
         transferFrom(from, to, tokenId);
-        require(_checkOnCEC4Received(from, to, tokenId, _data), "CEC4: transfer to non CEC4Receiver implementer");
+        require(_checkOnCRC4Received(from, to, tokenId, _data), "CRC4: transfer to non CRC4Receiver implementer");
     }
 
     /**
@@ -196,7 +196,7 @@ contract CEC4 is CEC3, ICEC4 {
      * is an operator of the owner, or is the owner of the token
      */
     function _isApprovedOrOwner(address spender, uint256 tokenId) internal view returns (bool) {
-        require(_exists(tokenId), "CEC4: operator query for nonexistent token");
+        require(_exists(tokenId), "CRC4: operator query for nonexistent token");
         address owner = ownerOf(tokenId);
         return (spender == owner || getApproved(tokenId) == spender || isApprovedForAll(owner, spender));
     }
@@ -208,8 +208,8 @@ contract CEC4 is CEC3, ICEC4 {
      * @param tokenId uint256 ID of the token to be minted
      */
     function _mint(address to, uint256 tokenId) internal {
-        require(to != address(0), "CEC4: mint to the zero address");
-        require(!_exists(tokenId), "CEC4: token already minted");
+        require(to != address(0), "CRC4: mint to the zero address");
+        require(!_exists(tokenId), "CRC4: token already minted");
 
         _tokenOwner[tokenId] = to;
         _ownedTokensCount[to].increment();
@@ -225,7 +225,7 @@ contract CEC4 is CEC3, ICEC4 {
      * @param tokenId uint256 ID of the token being burned
      */
     function _burn(address owner, uint256 tokenId) internal {
-        require(ownerOf(tokenId) == owner, "CEC4: burn of token that is not own");
+        require(ownerOf(tokenId) == owner, "CRC4: burn of token that is not own");
 
         _clearApproval(tokenId);
 
@@ -252,8 +252,8 @@ contract CEC4 is CEC3, ICEC4 {
      * @param tokenId uint256 ID of the token to be transferred
      */
     function _transferFrom(address from, address to, uint256 tokenId) internal {
-        require(ownerOf(tokenId) == from, "CEC4: transfer of token that is not own");
-        require(to != address(0), "CEC4: transfer to the zero address");
+        require(ownerOf(tokenId) == from, "CRC4: transfer of token that is not own");
+        require(to != address(0), "CRC4: transfer to the zero address");
 
         _clearApproval(tokenId);
 
@@ -266,7 +266,7 @@ contract CEC4 is CEC3, ICEC4 {
     }
 
     /**
-     * @dev Internal function to invoke `onCEC4Received` on a target address.
+     * @dev Internal function to invoke `onCRC4Received` on a target address.
      * The call is not executed if the target address is not a contract.
      *
      * This function is deprecated.
@@ -276,15 +276,15 @@ contract CEC4 is CEC3, ICEC4 {
      * @param _data bytes optional data to send along with the call
      * @return bool whether the call correctly returned the expected magic value
      */
-    function _checkOnCEC4Received(address from, address to, uint256 tokenId, bytes memory _data)
+    function _checkOnCRC4Received(address from, address to, uint256 tokenId, bytes memory _data)
         internal returns (bool)
     {
         if (!to.isContract()) {
             return true;
         }
 
-        bytes4 retval = ICEC4Receiver(to).onCEC4Received(msg.sender, from, tokenId, _data);
-        return (retval == _CEC4_RECEIVED);
+        bytes4 retval = ICRC4Receiver(to).onCRC4Received(msg.sender, from, tokenId, _data);
+        return (retval == _CRC4_RECEIVED);
     }
 
     /**

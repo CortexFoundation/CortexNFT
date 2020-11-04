@@ -1,13 +1,13 @@
 pragma solidity ^0.4.24;
 
-import "./CEC4/CEC4Full.sol";
+import "./CRC4/CRC4Full.sol";
 import "./utils/Counters.sol";
 
-contract Artwork is CEC4Full {
+contract Artwork is CRC4Full {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
-    constructor() CEC4Full("ARTWORK", "AW") public {
+    constructor() CRC4Full("ARTWORK", "AW") public {
     }
 
     function addItem(address creator, string memory tokenURI) public returns (uint256) {
