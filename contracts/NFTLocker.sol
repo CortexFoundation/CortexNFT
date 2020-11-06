@@ -46,6 +46,7 @@ contract NFTLocker is ICRC4Receiver{
     }
 
     function lockNFT(address _NFTAddr, uint256 _tokenId) external {
+        require(cortex2Ethereum[_NFTAddr] != address(0), "the contract has not register the crosse-chain service now!");
         ICRC4(_NFTAddr).safeTransferFrom(msg.sender, address(this), _tokenId);
         emit Lock(msg.sender, _NFTAddr, _tokenId);
     }
