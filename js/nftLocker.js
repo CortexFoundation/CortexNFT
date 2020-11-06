@@ -34,7 +34,7 @@ async function main() {
     console.log("Starting from block: " + blockCount);
     await new Promise(r => setTimeout(r, 5000));
     while(true) {
-        let pastEvents = await getPastEvents("lockNft", {fromBlock: blockCount});
+        let pastEvents = await getPastEvents("Lock", {fromBlock: blockCount});
         console.log(pastEvents);
         blockCount = await getCurrentBlockNum();
         blockCountFile.write(blockCount);
