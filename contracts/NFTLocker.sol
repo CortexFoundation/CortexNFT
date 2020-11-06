@@ -5,6 +5,7 @@ import "./CRC4/ICRC4Receiver.sol";
 
 contract NFTLocker is ICRC4Receiver{
     bytes4 private constant _CRC4_RECEIVED = 0x150b7a02;
+    bytes4 private constant _INTERFACE_ID_CRC4 = 0x80ac58cd;
     
     event Lock(address indexed from, address indexed nftAddr, uint256 indexed tokenId);
     
@@ -26,6 +27,7 @@ contract NFTLocker is ICRC4Receiver{
     }
 
     function lockNFT(address _nftAddr, uint256 _tokenId) external {
+        require(ICRC4(_nftAddr).supportsInterface(_INTERFACE_ID_CRC4), "not CRC4");
         ICRC4(_nftAddr).safeTransferFrom(msg.sender, address(this), _tokenId);
         emit Lock(msg.sender, _nftAddr, _tokenId);
     }
