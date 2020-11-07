@@ -1,10 +1,10 @@
 const Web3 = require('web3');
 const fs = require('fs');
-const nftLockerBuild = require('./build/contracts/NFTLocker.json');
+const nftLockerBuild = require('../build/contracts/NFTLocker.json');
 
 const providerETH = new Web3.providers.HttpProvider('https://mainnet.infura.io/v3/03fe211fc9a64c4ca614ca04e6d45c5d');
 const web3ETH = new Web3(providerETH);
-// const provider = new Web3.providers.HttpProvider('http://web3.cortexlabs.ai:30089');
+// const providerCTXC = new Web3.providers.HttpProvider('http://web3.cortexlabs.ai:30089');
 // 主网内网节点：
 const providerCTXC = new Web3.providers.HttpProvider('http://storage.cortexlabs.ai:30089');
 const web3CTXC = new Web3(providerCTXC);
