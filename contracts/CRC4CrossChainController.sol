@@ -32,14 +32,6 @@ contract CRC4CrossChainController is ICRC4Receiver {
         emit Register(_ERC721Addr, newCRC4);
     }
 
-    // actually it's not as useful we thought 
-    function resetMapping(address _ERC721Addr, address _CRC4Addr) public {
-        require(msg.sender == governance, "only governance could setup this mapping");
-        oldCRC4Addr = ERC721ToCRC4[_ERC721Addr];
-        ERC721ToCRC4[_ERC721Addr] = _CRC4Addr;
-        CRC4ToERC721[oldCRC4Addr] = address(0);
-        emit Register(_ERC721Addr, _CRC4Addr);
-    }
 
     function onCRC4Received(
         address operator, 
