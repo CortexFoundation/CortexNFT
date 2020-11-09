@@ -1,8 +1,8 @@
 pragma solidity ^0.6.0;
 
 import "./CrossChainArtwork.sol";
-import "@openzeppelin/contracts/IERC721.sol";
-import "@openzeppelin/contracts/IERC721Receiver.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 contract ERC721CrossChainController is IERC7214Receiver {
     bytes4 private constant _ERC721_RECEIVED = 0x150b7a02;
@@ -33,7 +33,7 @@ contract ERC721CrossChainController is IERC7214Receiver {
     }
 
 
-    function onCRC4Received(
+    function onERC721Received(
         address operator, 
         address from, 
         uint256 tokenId, 
@@ -41,16 +41,16 @@ contract ERC721CrossChainController is IERC7214Receiver {
     )
         public returns (bytes4) 
     {
-        return _CRC4_RECEIVED;
+        return _ERC721_RECEIVED;
     }
 
-    function lockCRC4(address _ERC721Addr, uint256 _tokenId) external {
-        require(ERC721ToCRC4[_ERC721Addr] != address(0), "the contract has not register the crosse-chain service now!");
+    function lock(address _ERC721Addr, uint256 _tokenId) external {
+        require(ERC721ToCRC4[_ERC721Addr] != address(0), "the contract has not registered the crosse-chain service!");
         IERC721(_ERC721Addr).safeTransferFrom(msg.sender, address(this), _tokenId);
         emit Lock(msg.sender, _ERC721Addr, _tokenId);
     }
 
-    function mintCRC4(address _CRC4Addr, address _owner, uint256 _tokenId, string memory _tokenURI) external {
+    function mint(address _ERC721Addr, address _owner, uint256 _tokenId, string memory _tokenURI) external {
         require(msg.sender == governance, "not goernance");
         CrossChainArtwork(CRC4ToERC721[_CRC4Addr]).addItemByTokenID(_owner, _tokenId, _tokenURI);
     }

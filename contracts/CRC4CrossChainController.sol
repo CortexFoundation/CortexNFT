@@ -44,13 +44,13 @@ contract CRC4CrossChainController is ICRC4Receiver {
         return _CRC4_RECEIVED;
     }
 
-    function lockCRC4(address _CRC4Addr, uint256 _tokenId) external {
-        require(CRC4ToERC721[_CRC4Addr] != address(0), "the contract has not register the crosse-chain service now!");
+    function lock(address _CRC4Addr, uint256 _tokenId) external {
+        require(CRC4ToERC721[_CRC4Addr] != address(0), "the contract has not registered the crosse-chain service!");
         ICRC4(_CRC4Addr).safeTransferFrom(msg.sender, address(this), _tokenId);
         emit Lock(msg.sender, _CRC4Addr, _tokenId);
     }
 
-    function mintCRC4(address _ERC721Addr, address _owner, uint256 _tokenId, string memory _tokenURI) external {
+    function mint(address _ERC721Addr, address _owner, uint256 _tokenId, string memory _tokenURI) external {
         require(msg.sender == governance, "not goernance");
         CrossChainArtwork(ERC721ToCRC4[_ERC721Addr]).addItemByTokenID(_owner, _tokenId, _tokenURI);
     }
