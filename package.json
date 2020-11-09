@@ -1,0 +1,11 @@
+{
+  "name": "CortexNFT",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:CortexFoundation/CortexNFT.git",
+  "author": "SteinsElite <lijunji@cortexlabs.ai>",
+  "license": "MIT",
+  "devDependencies": {
+    "@openzeppelin/contracts": "^3.2.0"
+  }
+}
