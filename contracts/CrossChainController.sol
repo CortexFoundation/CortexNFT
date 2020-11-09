@@ -54,6 +54,8 @@ contract CrossChainController is ICRC4Receiver, Ownable {
         if(nftReverseMapping[_nftSourceAddr] != address(0)) {
             ICRC4(nftReverseMapping[_nftSourceAddr]).safeTransferFrom(address(this), _owner, _tokenId);
         }
-        CrossChainArtwork(nftCrossChainMapping[_nftSourceAddr]).addItemByTokenID(_owner, _tokenId, _tokenURI);
+        else{
+            CrossChainArtwork(nftCrossChainMapping[_nftSourceAddr]).addItemByTokenID(_owner, _tokenId, _tokenURI);
+        }
     }
 }
