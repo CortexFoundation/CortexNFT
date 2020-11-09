@@ -4,7 +4,7 @@ import "./CRC4/CRC4Full.sol";
 import "./utils/Counters.sol";
 import "./utils/Ownable.sol";
 
-contract CrossChainArtwork {
+contract CrossChainArtwork is CRC4Full, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
