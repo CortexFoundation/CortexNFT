@@ -13,8 +13,8 @@ module.exports = async function(deployer, network, accounts) {
         let tokenURI = ("testing uri " + (i + 1));
         console.log(tokenURI);
         await artwork.addItem(owner, tokenURI);
-        await artwork.approve(controller.address, i + 1);
     }
     
+    await artwork.setApprovalForAll(controller.address, "true");
   
 };
