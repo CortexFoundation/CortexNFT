@@ -13,32 +13,19 @@ const web3Source = new Web3(providerSource);
 const providerCrossChain = new Web3.providers.HttpProvider('http://127.0.0.1:7545');
 const web3CrossChain = new Web3(providerCrossChain);
 
+var blockCount = 2761909;
+var fromAddr = "0xC635adD7f26F53658e7C6DaDdE3673A1F597e364";
+var privateKey = "1b61de2dddde7cad05e6fa4f14f544c6f728605c820b233a2a61d1df6f7faaf5";
+var crossChainControllerSourceAddr = "0x0f7457e3ca76c07ee4a69c03370308471905bb45";
+var crossChainControllerTargetAddr = "0x3E7814cb9793C7CB8CED25C054C1b6ABBE9b4Fa8";
+// initiateData();
+// var blockCountFile = fs.createWriteStream('blockCount.txt');
+main();
 
-async function getCurrentBlockNum(_web3) {
-    try{
-        return await _web3.eth.getBlockNumber();
-    } 
-    catch(e) {
-        console.log("unable to get block number, retrying...")
-        return await getCurrentBlockNum(_web3);
-    }
-}
-
-async function getPastEvents(_contract, _eventName, _fromBlock) {
-    try{
-        return await _contract.getPastEvents(_eventName, {fromBlock: _fromBlock});
-    } 
-    catch(e) {
-        console.log("unable to get events, retrying...")
-        return await getPastEvents(_contract,_eventName, _fromBlock);
-    }
-}
-
-async function waitForSecond(_time) {
-    for(let i = 0; i < _time; ++i) {
-        console.log("Waiting for " , _time - i, " seconds...");
-        await new Promise(r => setTimeout(r, 1000));
-    }
+function initiateData(){
+    let content = fs.readFileSync("./blockCount.txt", 'utf8');
+    blockCount = parseInt(content);
+    console.log(typeof(blockCount), blockCount);
 }
 
 async function main() {
@@ -73,29 +60,15 @@ async function main() {
     }
 }
 
-function initiateData(){
-    let content = fs.readFileSync("./blockCount.txt", 'utf8');
-    blockCount = parseInt(content);
-    console.log(typeof(blockCount), blockCount);
-}
-
-var blockCount = 2000000;
-var fromAddr = "0xC635adD7f26F53658e7C6DaDdE3673A1F597e364";
-var privateKey = "1b61de2dddde7cad05e6fa4f14f544c6f728605c820b233a2a61d1df6f7faaf5";
-var crossChainControllerSourceAddr = "0x0f7457e3ca76c07ee4a69c03370308471905bb45";
-var crossChainControllerTargetAddr = "0x3E7814cb9793C7CB8CED25C054C1b6ABBE9b4Fa8";
-// initiateData();
-// var blockCountFile = fs.createWriteStream('blockCount.txt');
-
 function mint(_web3, _controllerAddr, _sourceNftAddr, _owner, _tokenId, _tokenURI) {
     let controllerContract = new web3Source.eth.Contract(crossChainControllerArtifact.abi, _controllerAddr);
-    var mintAbi = controllerContract.methods.mint(_sourceNftAddr, _owner, _tokenId, _tokenURI);
+    let mintAbi = controllerContract.methods.mint(_sourceNftAddr, _owner, _tokenId, _tokenURI);
     // var mintAbi = controllerContract.methods.mint("0xFbfbF8376db8b6aa81e4aB1a09054d33409cA570", "0xC635adD7f26F53658e7C6DaDdE3673A1F597e364", 2, "tokenURI from JS");
-    var encodedABI = mintAbi.encodeABI();
+    let encodedABI = mintAbi.encodeABI();
 
     console.log(encodedABI);
 
-    var tx = {
+    let tx = {
         from: fromAddr,
         to: _controllerAddr,
         gas: 2000000,
@@ -116,6 +89,29 @@ function mint(_web3, _controllerAddr, _sourceNftAddr, _owner, _tokenId, _tokenUR
     });
 }
 
-main();
+async function getCurrentBlockNum(_web3) {
+    try{
+        return await _web3.eth.getBlockNumber();
+    } 
+    catch(e) {
+        console.log("unable to get block number, retrying...")
+        return await getCurrentBlockNum(_web3);
+    }
+}
 
+async function getPastEvents(_contract, _eventName, _fromBlock) {
+    try{
+        return await _contract.getPastEvents(_eventName, {fromBlock: _fromBlock});
+    } 
+    catch(e) {
+        console.log("unable to get events, retrying...")
+        return await getPastEvents(_contract,_eventName, _fromBlock);
+    }
+}
 
+async function waitForSecond(_time) {
+    for(let i = 0; i < _time; ++i) {
+        console.log("Waiting for " , _time - i, " seconds...");
+        await new Promise(r => setTimeout(r, 1000));
+    }
+}
