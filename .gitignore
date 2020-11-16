@@ -1,3 +1,4 @@
 build/
 js/artworkAbi.json
 node_modules
+.secret
