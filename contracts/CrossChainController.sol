@@ -6,7 +6,7 @@ import "./CRC4/ICRC4Receiver.sol";
 import "./utils/Ownable.sol";
 
 contract CrossChainController is ICRC4Receiver, Ownable {
-    bytes4 private constant _CRC4_RECEIVED = 0x150b7a02;
+    bytes4 private constant _CRC4_RECEIVED = 0xef0b63ff;
     bytes4 private constant _INTERFACE_ID_CRC4 = 0x80ac58cd;
     
     event Lock(address indexed _from, address indexed _nftAddr, uint256 indexed _tokenId);
