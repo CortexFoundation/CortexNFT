@@ -10,7 +10,9 @@ contract CrossChainArtwork is CRC4Full, Ownable {
 
     string public seriesName;
 
-    constructor(string memory _seriesName) CRC4Full("ARTWORK", "AW") public {
+    constructor(string memory _name, string memory _symbol, string memory _seriesName) 
+        CRC4Full(_name, _symbol) public 
+    {
         seriesName = _seriesName;
     }
     
