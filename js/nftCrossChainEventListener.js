@@ -3,6 +3,8 @@ const fs = require('fs');
 const crossChainControllerArtifact = require('../build/contracts/CrossChainController.json');
 const nftArtifact = require('../build/contracts/Artwork.json');
 
+var account = require("./account.json");
+
 // const providerSource = new Web3.providers.HttpProvider('http://web3.cortexlabs.ai:30089');
 // 主网内网节点：
 const providerSource = new Web3.providers.HttpProvider('http://storage.cortexlabs.ai:30089');
@@ -10,17 +12,19 @@ const providerSource = new Web3.providers.HttpProvider('http://storage.cortexlab
 const web3Source = new Web3(providerSource);
 
 // const providerCrossChain = new Web3.providers.HttpProvider('https://mainnet.infura.io/v3/03fe211fc9a64c4ca614ca04e6d45c5d');
-// const providerCrossChain = new Web3.providers.HttpProvider('https://kovan.infura.io/v3/1fc42d30c8a24e0183003704523a43d8');
-const providerCrossChain = new Web3.providers.HttpProvider('http://127.0.0.1:7545');
+const providerCrossChain = new Web3.providers.HttpProvider('https://kovan.infura.io/v3/1fc42d30c8a24e0183003704523a43d8');
+// const providerCrossChain = new Web3.providers.HttpProvider('http://127.0.0.1:7545');
 const web3CrossChain = new Web3(providerCrossChain);
 
-var blockCount = 2761909;
-var fromAddr = "0xC635adD7f26F53658e7C6DaDdE3673A1F597e364";
-var privateKey = "1b61de2dddde7cad05e6fa4f14f544c6f728605c820b233a2a61d1df6f7faaf5";
+var blockCount = 2812917;
+// var fromAddr = "0xC635adD7f26F53658e7C6DaDdE3673A1F597e364";
+// var privateKey = "1b61de2dddde7cad05e6fa4f14f544c6f728605c820b233a2a61d1df6f7faaf5";
+var fromAddr = account.address;
+var privateKey = account.privateKey;
 var crossChainControllerSourceAddr = "0x0f7457e3ca76c07ee4a69c03370308471905bb45";
-var crossChainControllerTargetAddr = "0x3E7814cb9793C7CB8CED25C054C1b6ABBE9b4Fa8";
+// var crossChainControllerTargetAddr = "0x3E7814cb9793C7CB8CED25C054C1b6ABBE9b4Fa8";
 // kovan:
-// var crossChainControllerTargetAddr = "0x87b28e420e71c5af3b4264004180855b56561242";
+var crossChainControllerTargetAddr = "0x05524cF790f7C18F583889422e55a1eB02686946";
 
 // initiateData();
 // var blockCountFile = fs.createWriteStream('blockCount.txt');

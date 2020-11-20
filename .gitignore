@@ -1,4 +1,5 @@
 build/
 js/artworkAbi.json
+js/account.json
 node_modules
 .secret
