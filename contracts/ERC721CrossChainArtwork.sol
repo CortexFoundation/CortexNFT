@@ -1,10 +1,11 @@
 pragma solidity ^0.4.24;
 
 import "./ERC721/ERC721Full.sol";
+import "./ERC721/ERC721Burnable.sol";
 import "./utils/Counters.sol";
 import "./utils/Ownable.sol";
 
-contract ERC721CrossChainArtwork is ERC721Full, Ownable {
+contract ERC721CrossChainArtwork is ERC721Full, ERC721Burnable, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 

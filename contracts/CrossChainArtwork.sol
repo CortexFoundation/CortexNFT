@@ -1,10 +1,11 @@
 pragma solidity ^0.4.24;
 
 import "./CRC4/CRC4Full.sol";
+import "./CRC4/CRC4Burnable.sol";
 import "./utils/Counters.sol";
 import "./utils/Ownable.sol";
 
-contract CrossChainArtwork is CRC4Full, Ownable {
+contract CrossChainArtwork is CRC4Full, CRC4Burnable, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
