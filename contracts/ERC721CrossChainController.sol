@@ -24,6 +24,7 @@ contract ERC721CrossChainController is IERC721Receiver, Ownable {
     function registerMinter(address _nftSourceAddr, string memory _name, string memory _symbol, string memory _seriesName) public {
         require(nftCrossChainMapping[_nftSourceAddr] == address(0), "already registered");
         address newTargetNft = new ERC721CrossChainArtwork(_name, _symbol, _seriesName);
+        ERC721CrossChainArtwork(newTargetNft).setApprovalForAll(address(this), true);
         nftCrossChainMapping[_nftSourceAddr] = newTargetNft;
         // for returning minted cross chain NFT
         nftReverseMapping[newTargetNft] = _nftSourceAddr;
