@@ -61,6 +61,15 @@ module.exports = {
       gasPrice: 1000000000,
       skipDryRun: true
     },
+    cortexMainnet: {
+      provider: () => new HDWalletProvider(mnemonic, `http://storage.cortexlabs.ai:30089`),
+      network_id: 21,
+      gas: 5500000,
+      confirmations: 1,
+      timeoutBlocks: 200,
+      gasPrice: 1000000000,
+      skipDryRun: true
+    },
   //   mainnet: {
   //     provider: () => new HDWalletProvider(mnemonic, `https://mainnet.infura.io/v3/03fe211fc9a64c4ca614ca04e6d45c5d`),
   //     network_id: 1,
