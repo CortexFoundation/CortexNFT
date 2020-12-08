@@ -5,13 +5,13 @@ import "./IERC721Receiver.sol";
 import "../utils/SafeMath.sol";
 import "../utils/Address.sol";
 import "../utils/Counters.sol";
-import "../utils/CRC3.sol";
+import "../utils/ERC165.sol";
 
 /**
  * @title ERC721 Non-Fungible Token Standard basic implementation
  * @dev see https://eips.ethereum.org/EIPS/eip-721
  */
-contract ERC721 is CRC3, IERC721 {
+contract ERC721 is ERC165, IERC721 {
     using SafeMath for uint256;
     using Address for address;
     using Counters for Counters.Counter;
@@ -49,7 +49,7 @@ contract ERC721 is CRC3, IERC721 {
     bytes4 private constant _INTERFACE_ID_ERC721 = 0x80ac58cd;
 
     constructor () public {
-        // register the supported interfaces to conform to ERC721 via CRC3
+        // register the supported interfaces to conform to ERC721 via ERC165
         _registerInterface(_INTERFACE_ID_ERC721);
     }
 

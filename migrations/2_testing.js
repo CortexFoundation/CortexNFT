@@ -17,7 +17,7 @@ module.exports = async function(deployer, network, accounts) {
     ];
 
     let contollerAddr = "0x4b3bd3f6234a67e83637d8c279307eb31b9d2c01";
-    for(let i = 0; i < artworks.length; ++i) {
+    for(let i = 3; i < artworks.length; ++i) {
         console.log(artworks[i][0]);
         await deployer.deploy(Artwork, "Alice 1", "AI", artworks[i][0]);
         let artwork = await Artwork.deployed();

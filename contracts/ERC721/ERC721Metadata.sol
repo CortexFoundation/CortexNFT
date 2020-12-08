@@ -2,9 +2,9 @@ pragma solidity ^0.4.24;
 
 import "./ERC721.sol";
 import "./IERC721Metadata.sol";
-import "../utils/CRC3.sol";
+import "../utils/ERC165.sol";
 
-contract ERC721Metadata is CRC3, ERC721, IERC721Metadata {
+contract ERC721Metadata is ERC165, ERC721, IERC721Metadata {
     // Token name
     string private _name;
 
@@ -30,7 +30,7 @@ contract ERC721Metadata is CRC3, ERC721, IERC721Metadata {
         _name = name;
         _symbol = symbol;
 
-        // register the supported interfaces to conform to ERC721 via CRC3
+        // register the supported interfaces to conform to ERC721 via ERC165
         _registerInterface(_INTERFACE_ID_ERC721_METADATA);
     }
 

@@ -2,13 +2,13 @@ pragma solidity ^0.4.24;
 
 import "./IERC721Enumerable.sol";
 import "./ERC721.sol";
-import "../utils/CRC3.sol";
+import "../utils/ERC165.sol";
 
 /**
  * @title ERC-721 Non-Fungible Token with optional enumeration extension logic
  * @dev See https://eips.ethereum.org/EIPS/eip-721
  */
-contract ERC721Enumerable is CRC3, ERC721, IERC721Enumerable {
+contract ERC721Enumerable is ERC165, ERC721, IERC721Enumerable {
     // Mapping from owner to list of owned token IDs
     mapping(address => uint256[]) private _ownedTokens;
 
@@ -34,7 +34,7 @@ contract ERC721Enumerable is CRC3, ERC721, IERC721Enumerable {
      * @dev Constructor function.
      */
     constructor () public {
-        // register the supported interface to conform to ERC721Enumerable via CRC3
+        // register the supported interface to conform to ERC721Enumerable via ERC165
         _registerInterface(_INTERFACE_ID_ERC721_ENUMERABLE);
     }
 
