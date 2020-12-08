@@ -49,10 +49,12 @@ contract ERC721CrossChainController is IERC721Receiver, Ownable {
     }
 
     function lock(address _nftAddr, uint256 _tokenId) external {
+        // lock original piece
         if(lockRegistered[_nftAddr]) {
             IERC721(_nftAddr).safeTransferFrom(msg.sender, address(this), _tokenId);
             emit Lock(msg.sender, _nftAddr, _tokenId);
         }
+        // burn returning piece
         else if(nftReverseMapping[_nftAddr] != address(0)) {
             ERC721CrossChainArtwork(_nftAddr).burn(_tokenId);
             emit Burn(_nftAddr, _tokenId);

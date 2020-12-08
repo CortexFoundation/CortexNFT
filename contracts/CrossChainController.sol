@@ -1,8 +1,8 @@
 pragma solidity ^0.4.24;
 
-import "./CrossChainArtwork.sol";
 import "./CRC4/ICRC4.sol";
 import "./CRC4/ICRC4Receiver.sol";
+import "./CrossChainArtwork.sol";
 import "./utils/Ownable.sol";
 
 contract CrossChainController is ICRC4Receiver, Ownable {
@@ -20,7 +20,7 @@ contract CrossChainController is ICRC4Receiver, Ownable {
     mapping(address => address) public nftReverseMapping;
     mapping(address => bool) public lockRegistered;
 
-    // pls make sure _nftSourceAddr implement the ERC721 standard
+    // pls make sure _nftSourceAddr implement the CRC4 standard
     function registerMinter(address _nftSourceAddr, string memory _name, string memory _symbol, string memory _seriesName) public {
         require(nftCrossChainMapping[_nftSourceAddr] == address(0), "already registered");
         address newTargetNft = new CrossChainArtwork(_name, _symbol, _seriesName);
@@ -48,10 +48,12 @@ contract CrossChainController is ICRC4Receiver, Ownable {
     }
 
     function lock(address _nftAddr, uint256 _tokenId) external {
+        // lock original piece
         if(lockRegistered[_nftAddr]) {
             ICRC4(_nftAddr).safeTransferFrom(msg.sender, address(this), _tokenId);
             emit Lock(msg.sender, _nftAddr, _tokenId);
         }
+        // burn returning piece
         else if(nftReverseMapping[_nftAddr] != address(0)) {
             CrossChainArtwork(_nftAddr).burn(_tokenId);
             emit Burn(_nftAddr, _tokenId);

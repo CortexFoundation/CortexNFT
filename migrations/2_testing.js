@@ -16,11 +16,14 @@ module.exports = async function(deployer, network, accounts) {
         ["高棉的微笑", "https://ipfs.io/ipfs/QmXDDN3qaz36TQoSEmY1EKYDtroq6iugM8y6Njrn4cvd5h"]
     ];
 
+    let contollerAddr = "0x4b3bd3f6234a67e83637d8c279307eb31b9d2c01";
     for(let i = 0; i < artworks.length; ++i) {
         console.log(artworks[i][0]);
         await deployer.deploy(Artwork, "Alice 1", "AI", artworks[i][0]);
         let artwork = await Artwork.deployed();
-        artwork.addItem(owner, artworks[i][1]);
+        await artwork.addItem(owner, artworks[i][1]);
+        await artwork.setApprovalForAll(contollerAddr, true);
+        // await ctr.registerLocker(artwork.address, await ethCtr.nftCrossChainMapping(artwork.address));
     }
     // await deployer.deploy(Artwork, "Cross Chain Test", "CCT", "Demo");
     // let artwork = await Artwork.deployed();
