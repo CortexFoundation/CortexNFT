@@ -6,6 +6,7 @@
   "author": "SteinsElite <lijunji@cortexlabs.ai>",
   "license": "MIT",
   "devDependencies": {
+    "@openzeppelin/cli": "^2.8.2",
     "@openzeppelin/contracts": "^3.2.0"
   },
   "dependencies": {
