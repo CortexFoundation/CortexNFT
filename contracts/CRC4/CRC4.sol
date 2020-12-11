@@ -202,6 +202,36 @@ contract CRC4 is CRC3, ICRC4 {
     }
 
     /**
+     * @dev Internal function to safely mint a new token.
+     * Reverts if the given token ID already exists.
+     * If the target address is a contract, it must implement `onCRC4Received`,
+     * which is called upon a safe transfer, and return the magic value
+     * `bytes4(keccak256("onCRC4Received(address,address,uint256,bytes)"))`; otherwise,
+     * the transfer is reverted.
+     * @param to The address that will own the minted token
+     * @param tokenId uint256 ID of the token to be minted
+     */
+    function _safeMint(address to, uint256 tokenId) internal {
+        _safeMint(to, tokenId, "");
+    }
+
+    /**
+     * @dev Internal function to safely mint a new token.
+     * Reverts if the given token ID already exists.
+     * If the target address is a contract, it must implement `onCRC4Received`,
+     * which is called upon a safe transfer, and return the magic value
+     * `bytes4(keccak256("onCRC4Received(address,address,uint256,bytes)"))`; otherwise,
+     * the transfer is reverted.
+     * @param to The address that will own the minted token
+     * @param tokenId uint256 ID of the token to be minted
+     * @param _data bytes data to send along with a safe transfer check
+     */
+    function _safeMint(address to, uint256 tokenId, bytes memory _data) internal {
+        _mint(to, tokenId);
+        require(_checkOnCRC4Received(address(0), to, tokenId, _data), "CRC4: transfer to non CRC4Receiver implementer");
+    }
+
+    /**
      * @dev Internal function to mint a new token.
      * Reverts if the given token ID already exists.
      * @param to The address that will own the minted token
