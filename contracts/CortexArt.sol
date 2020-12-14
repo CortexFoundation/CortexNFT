@@ -17,7 +17,6 @@ contract CortexArt is CRC4Full {
     // An event whenever a creator is whitelisted with the token id and the layer count
     event CreatorWhitelisted(
         uint256 tokenId,
-        uint256 layerCount,
         address creator
     );
 
@@ -113,13 +112,6 @@ contract CortexArt is CRC4Full {
         bool exists;
     }
 
-    struct WhitelistReservation {
-        // the address of the creator
-        address creator;
-        // the amount of layers they're expected to mint
-        uint256 layerCount;
-    }
-
     // track whether this token was sold the first time or not (used for determining whether to use first or secondary sale percentage)
     mapping(uint256 => bool) public tokenDidHaveFirstSale;
     // if a token's URI has been locked or not
@@ -133,7 +125,7 @@ contract CortexArt is CRC4Full {
     // mapping of tokenId to percentage of sale that the platform gets on secondary sales
     mapping(uint256 => uint256) public platformSecondSalePercentages;
     // what tokenId creators are allowed to mint (and how many layers)
-    mapping(uint256 => WhitelistReservation) public creatorWhitelist;
+    mapping(uint256 => address) public creatorWhitelist;
     // for each token, holds an array of the creator collaborators. For layer tokens it will likely just be [artist], for master tokens it may hold multiples
     mapping(uint256 => address[]) public uniqueTokenCreators;    
     // map a control token ID to its highest bid
@@ -185,28 +177,25 @@ contract CortexArt is CRC4Full {
         _;
     }
 
-    modifier onlyWhitelistedCreator(uint256 masterTokenId, uint256 layerCount) {
-        require(creatorWhitelist[masterTokenId].creator == msg.sender);
-        require(creatorWhitelist[masterTokenId].layerCount == layerCount);
+    modifier onlyWhitelistedCreator(uint256 masterTokenId) {
+        require(creatorWhitelist[masterTokenId] == msg.sender);
         _;
     }
 
     // reserve a tokenID and layer count for a creator. Define a platform royalty percentage per art piece (some pieces have higher or lower amount)
-    function whitelistTokenForCreator(address creator, uint256 masterTokenId, uint256 layerCount, 
+    function whitelistTokenForCreator(address creator, uint256 masterTokenId, 
         uint256 platformFirstSalePercentage, uint256 platformSecondSalePercentage) external onlyPlatform {
         // the tokenID we're reserving must be the current expected token supply
         require(masterTokenId == expectedTokenSupply);
-        // Async pieces must have at least 1 layer
-        require (layerCount > 0);
         // reserve the tokenID for this creator
-        creatorWhitelist[masterTokenId] = WhitelistReservation(creator, layerCount);
+        creatorWhitelist[masterTokenId] = creator;
         // increase the expected token supply
-        expectedTokenSupply = masterTokenId.add(layerCount).add(1);
+        expectedTokenSupply = masterTokenId.add(2);
         // define the platform percentages for this token here
         platformFirstSalePercentages[masterTokenId] = platformFirstSalePercentage;
         platformSecondSalePercentages[masterTokenId] = platformSecondSalePercentage;
 
-        emit CreatorWhitelisted(masterTokenId, layerCount, creator);
+        emit CreatorWhitelisted(masterTokenId, creator);
     }
 
     // Allows the current platform address to update to something different
@@ -263,52 +252,9 @@ contract CortexArt is CRC4Full {
         emit ArtistSecondSalePercentUpdated(artistSecondSalePercentage);
     }
 
-    function setupControlToken(uint256 controlTokenId, string controlTokenURI,
-        int256[] leverMinValues,
-        int256[] leverMaxValues,
-        int256 numAllowedUpdates,
-        address[] additionalCollaborators
-    ) external {
-        // Hard cap the number of levers a single control token can have
-        require (leverMinValues.length <= 500, "Too many control levers.");
-        // Hard cap the number of collaborators a single control token can have
-        require (additionalCollaborators.length <= 50, "Too many collaborators.");
-        // check that a control token exists for this token id
-        require(controlTokenMapping[controlTokenId].exists, "No control token found");
-        // ensure that this token is not setup yet
-        require(controlTokenMapping[controlTokenId].isSetup == false, "Already setup");
-        // ensure that only the control token artist is attempting this mint
-        require(uniqueTokenCreators[controlTokenId][0] == msg.sender, "Must be control token artist");
-        // enforce that the length of all the array lengths are equal
-        require((leverMinValues.length == leverMaxValues.length), "Values array mismatch");
-        // require the number of allowed updates to be infinite (-1) or some finite number
-        require((numAllowedUpdates == -1) || (numAllowedUpdates > 0), "Invalid allowed updates");
-        // mint the control token here
-        super._safeMint(msg.sender, controlTokenId);
-        // set token URI
-        super._setTokenURI(controlTokenId, controlTokenURI);        
-        // create the control token
-        controlTokenMapping[controlTokenId] = ControlToken(leverMinValues.length, numAllowedUpdates, true, true);
-        // create the control token levers now
-        for (uint256 k = 0; k < leverMinValues.length; k++) {
-            // enforce that maxValue is greater than or equal to minValue
-            require(leverMaxValues[k] >= leverMinValues[k], "Max val must >= min");
-            // add the lever to this token
-            controlTokenMapping[controlTokenId].levers[k] = ControlLever(leverMinValues[k],
-                leverMaxValues[k], leverMinValues[k], true);
-        }
-        // the control token artist can optionally specify additional collaborators on this layer
-        for (uint256 i = 0; i < additionalCollaborators.length; i++) {
-            // can't provide burn address as collaborator
-            require(additionalCollaborators[i] != address(0));
-
-            uniqueTokenCreators[controlTokenId].push(additionalCollaborators[i]);
-        }
-    }
-
 
     function mintArtwork(uint256 masterTokenId, string artworkTokenURI, address[] controlTokenArtists)
-        external onlyWhitelistedCreator(masterTokenId, controlTokenArtists.length) {
+        external onlyWhitelistedCreator(masterTokenId) {
         // Can't mint a token with ID 0 anymore
         require(masterTokenId > 0);
         // Mint the token that represents ownership of the entire artwork    
