@@ -60,46 +60,21 @@ contract CortexArt is CRC4Full {
         address buyer
     );
 
-    // An event whenever a control token has been updated
-    event ControlLeverUpdated(
-        // the id of the token
+    event ControlImageUpdated(
         uint256 tokenId,
-        // an optional amount that the updater sent to boost priority of the rendering
-        uint256 priorityTip,
-        // the number of times this control lever can now be updated
+        uint256 tips,
         int256 numRemainingUpdates,
-        // the ids of the levers that were updated
-        uint256[] leverIds,        
-        // the previous values that the levers had before this update (for clients who want to animate the change)
-        int256[] previousValues,
-        // the new updated value
-        int256[] updatedValues
+        string newTokenURI
     );
 
     // struct for a token that controls part of the artwork
     struct ControlToken {
-        // number that tracks how many levers there are
-        uint256 numControlLevers;
         // The number of update calls this token has (-1 for infinite)
         int256 numRemainingUpdates;
         // false by default, true once instantiated
         bool exists;
         // false by default, true once setup by the artist
         bool isSetup;
-        // the levers that this control token can use
-        mapping(uint256 => ControlLever) levers;
-    }
-
-    // struct for a lever on a control token that can be changed
-    struct ControlLever {
-        // // The minimum value this token can have (inclusive)
-        int256 minValue;
-        // The maximum value this token can have (inclusive)
-        int256 maxValue;
-        // The current value for this token
-        int256 currentValue;
-        // false by default, true once instantiated
-        bool exists;
     }
 
     // struct for a pending bid 
@@ -272,7 +247,7 @@ contract CortexArt is CRC4Full {
             // add this control token artist to the unique creator list for that control token
             uniqueTokenCreators[controlTokenId].push(controlTokenArtists[i]);
             // stub in an existing control token so exists is true
-            controlTokenMapping[controlTokenId] = ControlToken(0, 0, true, false);
+            controlTokenMapping[controlTokenId] = ControlToken(0, true, false);
 
             // Layer control tokens use the same royalty percentage as the master token
             platformFirstSalePercentages[controlTokenId] = platformFirstSalePercentages[masterTokenId];
@@ -426,30 +401,6 @@ contract CortexArt is CRC4Full {
         return controlTokenMapping[controlTokenId].numRemainingUpdates;
     }
 
-    // return the min, max, and current value of a control lever
-    function getControlToken(uint256 controlTokenId) external view returns(int256[] memory) {
-        require(controlTokenMapping[controlTokenId].exists, "Token does not exist.");
-
-        ControlToken storage controlToken = controlTokenMapping[controlTokenId];
-
-        int256[] memory returnValues = new int256[](controlToken.numControlLevers.mul(3));
-        uint256 returnValIndex = 0;
-
-        // iterate through all the control levers for this control token
-        for (uint256 i = 0; i < controlToken.numControlLevers; i++) {
-            returnValues[returnValIndex] = controlToken.levers[i].minValue;
-            returnValIndex = returnValIndex.add(1);
-
-            returnValues[returnValIndex] = controlToken.levers[i].maxValue;
-            returnValIndex = returnValIndex.add(1);
-
-            returnValues[returnValIndex] = controlToken.levers[i].currentValue;
-            returnValIndex = returnValIndex.add(1);
-        }
-
-        return returnValues;
-    }
-
     // anyone can grant permission to another address to control a specific token on their behalf. Set to Address(0) to reset.
     function grantControlPermission(uint256 tokenId, address permissioned) external {
         permissionedControllers[msg.sender][tokenId] = permissioned;
@@ -459,7 +410,7 @@ contract CortexArt is CRC4Full {
 
     // Allows owner (or permissioned user) of a control token to update its lever values
     // Optionally accept a payment to increase speed of rendering priority
-    function useControlToken(uint256 controlTokenId, uint256[] leverIds, int256[] newValues) external payable {
+    function useControlToken(uint256 controlTokenId, string _newTokenURI) external payable {
         // check if sender is owner/approved of token OR if they're a permissioned controller for the token owner      
         require(_isApprovedOrOwner(msg.sender, controlTokenId) || (permissionedControllers[ownerOf(controlTokenId)][controlTokenId] == msg.sender),
             "Owner or permissioned only");
@@ -468,27 +419,8 @@ contract CortexArt is CRC4Full {
         // get the control token reference
         ControlToken storage controlToken = controlTokenMapping[controlTokenId];
         // check that number of uses for control token is either infinite or is positive
-        require((controlToken.numRemainingUpdates == -1) || (controlToken.numRemainingUpdates > 0), "No more updates allowed");        
-        // collect the previous lever values for the event emit below
-        int256[] memory previousValues = new int256[](newValues.length);
-
-        for (uint256 i = 0; i < leverIds.length; i++) {
-            // get the control lever
-            ControlLever storage lever = controlTokenMapping[controlTokenId].levers[leverIds[i]];
-
-            // Enforce that the new value is valid        
-            require((newValues[i] >= lever.minValue) && (newValues[i] <= lever.maxValue), "Invalid val");
-
-            // Enforce that the new value is different
-            require(newValues[i] != lever.currentValue, "Must provide different val");
-
-            // grab previous value for the event emit
-            previousValues[i] = lever.currentValue;
-
-            // Update token current value
-            lever.currentValue = newValues[i];    
-        }
-
+        require((controlToken.numRemainingUpdates == -1) || (controlToken.numRemainingUpdates > 0), "No more updates allowed");   
+        _setTokenURI(controlTokenId.add(1), _newTokenURI);
         // if there's a payment then send it to the platform (for higher priority updates)
         if (msg.value > 0) {
             safeFundsTransfer(platformAddress, msg.value);
@@ -506,7 +438,7 @@ contract CortexArt is CRC4Full {
         }
 
         // emit event
-        emit ControlLeverUpdated(controlTokenId, msg.value, controlToken.numRemainingUpdates, leverIds, previousValues, newValues);
+        emit ControlImageUpdated(controlTokenId, msg.value, controlToken.numRemainingUpdates, _newTokenURI);
     }
 
     // Allows a user to withdraw all failed transaction credits
