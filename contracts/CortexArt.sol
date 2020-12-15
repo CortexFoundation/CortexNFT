@@ -69,6 +69,8 @@ contract CortexArt is CRC4Full {
 
     // struct for a token that controls part of the artwork
     struct ControlToken {
+        // ipfs hashes for all images
+        string[] imageHistroies;
         // The number of update calls this token has (-1 for infinite)
         int256 numRemainingUpdates;
         // false by default, true once instantiated
@@ -117,15 +119,13 @@ contract CortexArt is CRC4Full {
     uint256 public minBidIncreasePercent;
     // the address of the platform (for receving commissions and royalties)
     address public platformAddress;
-    // the address of the contract that can upgrade from v1 to v2 tokens
-    address public upgraderAddress;
+
 
     constructor
     (
         string memory _name, 
         string memory _symbol, 
-        uint256 _initialExpectedTokenSupply, 
-        address _upgraderAddress
+        uint256 _initialExpectedTokenSupply
     ) CRC4Full(_name, _symbol) public {
 
         // starting royalty amounts
@@ -137,14 +137,12 @@ contract CortexArt is CRC4Full {
         // by default, the platformAddress is the address that mints this contract
         platformAddress = msg.sender;
 
-        // set the upgrader address
-        upgraderAddress = _upgraderAddress;
-
         // set the initial expected token supply       
         expectedTokenSupply = _initialExpectedTokenSupply;
 
         require(expectedTokenSupply > 0);
     }
+
 
     // modifier for only allowing the platform to make a call
     modifier onlyPlatform() {
@@ -152,10 +150,12 @@ contract CortexArt is CRC4Full {
         _;
     }
 
+
     modifier onlyWhitelistedCreator(uint256 masterTokenId) {
         require(creatorWhitelist[masterTokenId] == msg.sender);
         _;
     }
+
 
     // reserve a tokenID and layer count for a creator. Define a platform royalty percentage per art piece (some pieces have higher or lower amount)
     function whitelistTokenForCreator(address creator, uint256 masterTokenId, 
@@ -173,6 +173,7 @@ contract CortexArt is CRC4Full {
         emit CreatorWhitelisted(masterTokenId, creator);
     }
 
+
     // Allows the current platform address to update to something different
     function updatePlatformAddress(address newPlatformAddress) external onlyPlatform {
         platformAddress = newPlatformAddress;
@@ -180,11 +181,13 @@ contract CortexArt is CRC4Full {
         emit PlatformAddressUpdated(newPlatformAddress);
     }
 
+
     // Allows platform to waive the first sale requirement for a token (for charity events, special cases, etc)
     function waiveFirstSaleRequirement(uint256 tokenId) external onlyPlatform {
         // This allows the token sale proceeds to go to the current owner (rather than be distributed amongst the token's creators)
         tokenDidHaveFirstSale[tokenId] = true;
     }
+
 
     // Allows platform to change the royalty percentage for a specific token
     function updatePlatformSalePercentage(uint256 tokenId, uint256 platformFirstSalePercentage, 
@@ -195,12 +198,16 @@ contract CortexArt is CRC4Full {
         // emit an event to notify that the platform percent for this token has changed
         emit PlatformSalePercentageUpdated(tokenId, platformFirstSalePercentage, platformSecondSalePercentage);
     }
+
+
     // Allows the platform to change the minimum percent increase for incoming bids
     function updateMinimumBidIncreasePercent(uint256 _minBidIncreasePercent) external onlyPlatform {
         require((_minBidIncreasePercent > 0) && (_minBidIncreasePercent <= 50), "Bid increases must be within 0-50%");
         // set the new bid increase percent
         minBidIncreasePercent = _minBidIncreasePercent;
     }
+
+
     // Allow the platform to update a token's URI if it's not locked yet (for fixing tokens post mint process)
     function updateTokenURI(uint256 tokenId, string tokenURI) external onlyPlatform {
         // ensure that this token exists
@@ -211,6 +218,7 @@ contract CortexArt is CRC4Full {
         super._setTokenURI(tokenId, tokenURI);
     }
 
+
     // Locks a token's URI from being updated
     function lockTokenURI(uint256 tokenId) external onlyPlatform {
         // ensure that this token exists
@@ -218,6 +226,7 @@ contract CortexArt is CRC4Full {
         // lock this token's URI from being changed
         tokenURILocked[tokenId] = true;
     }
+
 
     // Allows platform to change the percentage that artists receive on secondary sales
     function updateArtistSecondSalePercentage(uint256 _artistSecondSalePercentage) external onlyPlatform {
@@ -228,47 +237,52 @@ contract CortexArt is CRC4Full {
     }
 
 
-    function mintArtwork(uint256 masterTokenId, string artworkTokenURI, address[] controlTokenArtists)
-        external onlyWhitelistedCreator(masterTokenId) {
+    function mintArtwork(uint256 _tokenId, string _artworkTokenURI, address[] _controlTokenArtists)
+        external onlyWhitelistedCreator(_tokenId) {
         // Can't mint a token with ID 0 anymore
-        require(masterTokenId > 0);
+        require(_tokenId > 0);
         // Mint the token that represents ownership of the entire artwork    
-        super._safeMint(msg.sender, masterTokenId);
+        super._safeMint(msg.sender, _tokenId);
         // set the token URI for this art
-        super._setTokenURI(masterTokenId, artworkTokenURI);
+        super._setTokenURI(_tokenId, _artworkTokenURI);
         // track the msg.sender address as the artist address for future royalties
-        uniqueTokenCreators[masterTokenId].push(msg.sender);
+        uniqueTokenCreators[_tokenId].push(msg.sender);
         // iterate through all control token URIs (1 for each control token)
-        for (uint256 i = 0; i < controlTokenArtists.length; i++) {
+        for (uint256 i = 0; i < _controlTokenArtists.length; i++) {
             // can't provide burn address as artist
-            require(controlTokenArtists[i] != address(0));
-            // determine the tokenID for this control token
-            uint256 controlTokenId = masterTokenId + i + 1;
+            require(_controlTokenArtists[i] != address(0));
             // add this control token artist to the unique creator list for that control token
-            uniqueTokenCreators[controlTokenId].push(controlTokenArtists[i]);
+            uniqueTokenCreators[_tokenId].push(_controlTokenArtists[i]);
+            ControlToken storage controlToken = controlTokenMapping[_tokenId];
+            // add the initially generated image
+            controlToken.imageHistroies.push(_artworkTokenURI);
+            controlToken.numRemainingUpdates = 0;
             // stub in an existing control token so exists is true
-            controlTokenMapping[controlTokenId] = ControlToken(0, true, false);
+            controlToken.exists = true;
+            controlToken.isSetup = false;
 
             // Layer control tokens use the same royalty percentage as the master token
-            platformFirstSalePercentages[controlTokenId] = platformFirstSalePercentages[masterTokenId];
+            platformFirstSalePercentages[_tokenId] = platformFirstSalePercentages[_tokenId];
 
-            platformSecondSalePercentages[controlTokenId] = platformSecondSalePercentages[masterTokenId];
+            platformSecondSalePercentages[_tokenId] = platformSecondSalePercentages[_tokenId];
 
-            if (controlTokenArtists[i] != msg.sender) {
+            if (_controlTokenArtists[i] != msg.sender) {
                 bool containsControlTokenArtist = false;
 
-                for (uint256 k = 0; k < uniqueTokenCreators[masterTokenId].length; k++) {
-                    if (uniqueTokenCreators[masterTokenId][k] == controlTokenArtists[i]) {
+                for (uint256 k = 0; k < uniqueTokenCreators[_tokenId].length; k++) {
+                    if (uniqueTokenCreators[_tokenId][k] == _controlTokenArtists[i]) {
                         containsControlTokenArtist = true;
                         break;
                     }
                 }
                 if (containsControlTokenArtist == false) {
-                    uniqueTokenCreators[masterTokenId].push(controlTokenArtists[i]);
+                    uniqueTokenCreators[_tokenId].push(_controlTokenArtists[i]);
                 }
             }
         }
     }
+
+
     // Bidder functions
     function bid(uint256 tokenId) external payable {
         // don't allow bids of 0
@@ -287,6 +301,8 @@ contract CortexArt is CRC4Full {
         // Emit event for the bid proposal
         emit BidProposed(tokenId, msg.value, msg.sender);
     }
+
+
     // allows an address with a pending bid to withdraw it
     function withdrawBid(uint256 tokenId) external {
         // check that there is a bid from the sender to withdraw (also allows platform address to withdraw a bid on someone's behalf)
@@ -294,6 +310,8 @@ contract CortexArt is CRC4Full {
         // attempt to withdraw the bid
         _withdrawBid(tokenId);        
     }
+
+
     function _withdrawBid(uint256 tokenId) internal {
         require(pendingBids[tokenId].exists);
         // Return bid amount back to bidder
@@ -330,6 +348,7 @@ contract CortexArt is CRC4Full {
         onTokenSold(tokenId, saleAmount, msg.sender);
     }
 
+
     // Take an amount and distribute it evenly amongst a list of creator addresses
     function distributeFundsToCreators(uint256 amount, address[] memory creators) private {
         uint256 creatorShare = amount.div(creators.length);
@@ -338,6 +357,7 @@ contract CortexArt is CRC4Full {
             safeFundsTransfer(creators[i], creatorShare);
         }
     }
+
 
     // When a token is sold via list price or bid. Distributes the sale amount to the unique token creators and transfer
     // the token to the new owner
@@ -371,6 +391,7 @@ contract CortexArt is CRC4Full {
         emit TokenSale(tokenId, saleAmount, to);
     }
 
+
     // Owner functions
     // Allow owner to accept the highest bid for a token
     function acceptBid(uint256 tokenId, uint256 minAcceptedAmount) external {
@@ -384,6 +405,7 @@ contract CortexArt is CRC4Full {
         onTokenSold(tokenId, pendingBids[tokenId].amount, pendingBids[tokenId].bidder);
     }
 
+
     // Allows owner of a control token to set an immediate buy price. Set to 0 to reset.
     function makeBuyPrice(uint256 tokenId, uint256 amount) external {
         // check if sender is owner/approved of token        
@@ -394,6 +416,7 @@ contract CortexArt is CRC4Full {
         emit BuyPriceSet(tokenId, amount);
     }
 
+
     // return the number of times that a control token can be used
     function getNumRemainingControlUpdates(uint256 controlTokenId) external view returns (int256) {
         require(controlTokenMapping[controlTokenId].exists, "Token does not exist.");
@@ -401,12 +424,14 @@ contract CortexArt is CRC4Full {
         return controlTokenMapping[controlTokenId].numRemainingUpdates;
     }
 
+
     // anyone can grant permission to another address to control a specific token on their behalf. Set to Address(0) to reset.
     function grantControlPermission(uint256 tokenId, address permissioned) external {
         permissionedControllers[msg.sender][tokenId] = permissioned;
 
         emit PermissionUpdated(tokenId, msg.sender, permissioned);
     }
+
 
     // Allows owner (or permissioned user) of a control token to update its lever values
     // Optionally accept a payment to increase speed of rendering priority
@@ -441,6 +466,7 @@ contract CortexArt is CRC4Full {
         emit ControlImageUpdated(controlTokenId, msg.value, controlToken.numRemainingUpdates, _newTokenURI);
     }
 
+
     // Allows a user to withdraw all failed transaction credits
     function withdrawAllFailedCredits() external {
         uint256 amount = failedTransferCredits[msg.sender];
@@ -454,6 +480,7 @@ contract CortexArt is CRC4Full {
         require(successfulWithdraw);
     }
 
+
     // Safely transfer funds and if fail then store that amount as credits for a later pull
     function safeFundsTransfer(address recipient, uint256 amount) internal {
         // attempt to send the funds to the recipient
@@ -463,6 +490,7 @@ contract CortexArt is CRC4Full {
             failedTransferCredits[recipient] = failedTransferCredits[recipient].add(amount);
         }
     }
+
 
     // override the default transfer
     function _transferFrom(address from, address to, uint256 tokenId) internal {
