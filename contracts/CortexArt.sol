@@ -151,26 +151,26 @@ contract CortexArt is CRC4Full {
     }
 
 
-    modifier onlyWhitelistedCreator(uint256 masterTokenId) {
-        require(creatorWhitelist[masterTokenId] == msg.sender);
+    modifier onlyWhitelistedCreator(uint256 _tokenId) {
+        require(creatorWhitelist[_tokenId] == msg.sender);
         _;
     }
 
 
     // reserve a tokenID and layer count for a creator. Define a platform royalty percentage per art piece (some pieces have higher or lower amount)
-    function whitelistTokenForCreator(address creator, uint256 masterTokenId, 
+    function whitelistTokenForCreator(address creator, uint256 _tokenId, 
         uint256 platformFirstSalePercentage, uint256 platformSecondSalePercentage) external onlyPlatform {
         // the tokenID we're reserving must be the current expected token supply
-        require(masterTokenId == expectedTokenSupply);
+        require(_tokenId == expectedTokenSupply);
         // reserve the tokenID for this creator
-        creatorWhitelist[masterTokenId] = creator;
+        creatorWhitelist[_tokenId] = creator;
         // increase the expected token supply
-        expectedTokenSupply = masterTokenId.add(2);
+        expectedTokenSupply = _tokenId.add(2);
         // define the platform percentages for this token here
-        platformFirstSalePercentages[masterTokenId] = platformFirstSalePercentage;
-        platformSecondSalePercentages[masterTokenId] = platformSecondSalePercentage;
+        platformFirstSalePercentages[_tokenId] = platformFirstSalePercentage;
+        platformSecondSalePercentages[_tokenId] = platformSecondSalePercentage;
 
-        emit CreatorWhitelisted(masterTokenId, creator);
+        emit CreatorWhitelisted(_tokenId, creator);
     }
 
 
@@ -336,7 +336,7 @@ contract CortexArt is CRC4Full {
         // if this is a control token
         if (controlTokenMapping[tokenId].exists) {
             // ensure that the remaining uses on the token is equal to what buyer expects
-            require(controlTokenMapping[tokenId].numRemainingUpdates == expectedRemainingUpdates);
+            require(controlTokenMapping[tokenId].numRemainingUpdates >= expectedRemainingUpdates);
         }
         // Return all highest bidder's money
         if (pendingBids[tokenId].exists) {
@@ -476,7 +476,7 @@ contract CortexArt is CRC4Full {
 
         failedTransferCredits[msg.sender] = 0;
 
-        (bool successfulWithdraw, ) = msg.sender.call.value(amount)("");
+        bool successfulWithdraw = msg.sender.call.value(amount)("");
         require(successfulWithdraw);
     }
 
@@ -484,7 +484,7 @@ contract CortexArt is CRC4Full {
     // Safely transfer funds and if fail then store that amount as credits for a later pull
     function safeFundsTransfer(address recipient, uint256 amount) internal {
         // attempt to send the funds to the recipient
-        (bool success, ) = recipient.call.value(amount).gas(2300)("");
+        bool success = recipient.call.value(amount).gas(2300)("");
         // if it failed, update their credit balance so they can pull it later
         if (success == false) {
             failedTransferCredits[recipient] = failedTransferCredits[recipient].add(amount);
