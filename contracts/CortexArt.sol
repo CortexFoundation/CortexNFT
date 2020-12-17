@@ -180,6 +180,11 @@ contract CortexArt is CRC4Full {
     }
 
 
+    function getTokenImageHistoryLength(uint256 _tokenId) public view returns(uint256) {
+        return controlTokenMapping[_tokenId].imageHistroies.length;
+    }
+
+
     // reserve a tokenID and layer count for a creator. Define a platform royalty percentage per art piece (some pieces have higher or lower amount)
     function whitelistTokenForCreator(address creator, uint256 _tokenId, 
         uint256 platformFirstSalePercentage, uint256 platformSecondSalePercentage) external onlyPlatform {
@@ -265,7 +270,7 @@ contract CortexArt is CRC4Full {
     }
 
 
-    function mintArtwork(uint256 _tokenId, string _artworkTokenURI, address[] _controlTokenArtists)
+    function mintArtwork(uint256 _tokenId, string _artworkTokenURI, uint256 _numUpdates, address[] _controlTokenArtists)
         external onlyWhitelistedCreator(_tokenId) {
         // Can't mint a token with ID 0 anymore
         require(_tokenId > 0);
@@ -284,7 +289,7 @@ contract CortexArt is CRC4Full {
             ControlToken storage controlToken = controlTokenMapping[_tokenId];
             // add the initially generated image
             controlToken.imageHistroies.push(_artworkTokenURI);
-            controlToken.numRemainingUpdates = 0;
+            controlToken.numRemainingUpdates = _numUpdates;
             // stub in an existing control token so exists is true
             controlToken.exists = true;
             controlToken.isSetup = false;
@@ -313,6 +318,7 @@ contract CortexArt is CRC4Full {
 
     function openAuction(uint256 _tokenId, uint256 _startTime, uint256 _endTime) external {
         require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
+        require(pendingBids[_tokenId].exists == false, "Sold!");
         require((_startTime >= now) && (_startTime - now <= maximumAuctionPreparingTime), "Invlid starting time period!");
         require((_endTime > _startTime) && (_endTime - _startTime <= maximumAuctionPeriod), "Invalid ending time period!");
         require((sellingState[_tokenId].auctionEndTime < now) && (sellingState[_tokenId].auctionStartTime < now), "There is an existing auction");
@@ -336,7 +342,9 @@ contract CortexArt is CRC4Full {
         // don't allow bids of 0
         require(msg.value > 0);
         // Check for auction expiring time
-        require(sellingState[tokenId].auctionEndTime >= now, "Auction expired!");
+        require(sellingState[tokenId].auctionStartTime >= now, "Auction hasn't started!");
+        // Check for auction expiring time
+        require(sellingState[tokenId].auctionEndTime <= now, "Auction expired!");
         // don't let owners/approved bid on their own tokens
         require(_isApprovedOrOwner(msg.sender, tokenId) == false);
         // check if there's a high bid
@@ -493,7 +501,7 @@ contract CortexArt is CRC4Full {
         ControlToken storage controlToken = controlTokenMapping[controlTokenId];
         // check that number of uses for control token is either infinite or is positive
         require((controlToken.numRemainingUpdates == -1) || (controlToken.numRemainingUpdates > 0), "No more updates allowed");   
-        _setTokenURI(controlTokenId.add(1), _newTokenURI);
+        controlToken.imageHistroies.push(_newTokenURI);
         // if there's a payment then send it to the platform (for higher priority updates)
         if (msg.value > 0) {
             safeFundsTransfer(platformAddress, msg.value);
