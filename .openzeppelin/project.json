@@ -1,7 +1,8 @@
 {
   "manifestVersion": "2.2",
   "contracts": {
-    "Artwork": "Artwork"
+    "Artwork": "Artwork",
+    "CortexArt": "CortexArt"
   },
   "dependencies": {},
   "name": "CortexNFT",

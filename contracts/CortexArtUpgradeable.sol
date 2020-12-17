@@ -1,8 +1,9 @@
 pragma solidity ^0.4.24;
 
+import "@openzeppelin/upgrades/contracts/Initializable.sol";
 import "./CRC4/CRC4Full.sol";
 
-contract CortexArt is CRC4Full {
+contract CortexArtUpgradeable is Initializable, CRC4Full {
     // An event whenever the platform address is updated
     event PlatformAddressUpdated(
         address platformAddress
@@ -79,12 +80,6 @@ contract CortexArt is CRC4Full {
         bool isSetup;
     }
 
-    // 
-    struct SellingState {
-        uint256 buyPrices;
-        uint256 auctionEndTime;
-    }
-
     // struct for a pending bid 
     struct PendingBid {
         // the address of the bidder
@@ -98,7 +93,9 @@ contract CortexArt is CRC4Full {
     // track whether this token was sold the first time or not (used for determining whether to use first or secondary sale percentage)
     mapping(uint256 => bool) public tokenDidHaveFirstSale;
     // if a token's URI has been locked or not
-    mapping(uint256 => bool) public tokenURILocked;  
+    mapping(uint256 => bool) public tokenURILocked;    
+    // map control token ID to its buy price
+    mapping(uint256 => uint256) public buyPrices;    
     // mapping of addresses to credits for failed transfers
     mapping(address => uint256) public failedTransferCredits;
     // mapping of tokenId to percentage of sale that the platform gets on first sales
@@ -109,8 +106,6 @@ contract CortexArt is CRC4Full {
     mapping(uint256 => address) public creatorWhitelist;
     // for each token, holds an array of the creator collaborators. For layer tokens it will likely just be [artist], for master tokens it may hold multiples
     mapping(uint256 => address[]) public uniqueTokenCreators;    
-    // map a control token ID to its selling state
-    mapping(uint256 => SellingState) public sellingState;
     // map a control token ID to its highest bid
     mapping(uint256 => PendingBid) public pendingBids;
     // map a control token id to a control token struct
@@ -127,12 +122,12 @@ contract CortexArt is CRC4Full {
     address public platformAddress;
 
 
-    constructor
+    function initialize
     (
         string memory _name, 
         string memory _symbol, 
         uint256 _initialExpectedTokenSupply
-    ) CRC4Full(_name, _symbol) public {
+    ) public {
 
         // starting royalty amounts
         artistSecondSalePercentage = 10;
@@ -289,20 +284,10 @@ contract CortexArt is CRC4Full {
     }
 
 
-    function openAuction(uint256 _tokenId, uint256 _endTime) external {
-        require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
-        require(_endTime > now, "Invalid time period!");
-        require(sellingState[_tokenId].auctionEndTime < now, "Invalid time period!");
-        sellingState[_tokenId].auctionEndTime = _endTime;
-    }
-
-
     // Bidder functions
     function bid(uint256 tokenId) external payable {
         // don't allow bids of 0
         require(msg.value > 0);
-        // Check for auction expiring time
-        require(sellingState[tokenId].auctionEndTime >= now, "Auction expired!");
         // don't let owners/approved bid on their own tokens
         require(_isApprovedOrOwner(msg.sender, tokenId) == false);
         // check if there's a high bid
@@ -322,7 +307,7 @@ contract CortexArt is CRC4Full {
     // allows an address with a pending bid to withdraw it
     function withdrawBid(uint256 tokenId) external {
         // check that there is a bid from the sender to withdraw (also allows platform address to withdraw a bid on someone's behalf)
-        require(msg.sender == platformAddress);
+        require((pendingBids[tokenId].bidder == msg.sender) || (msg.sender == platformAddress));
         // attempt to withdraw the bid
         _withdrawBid(tokenId);        
     }
@@ -344,7 +329,7 @@ contract CortexArt is CRC4Full {
         // don't let owners/approved buy their own tokens
         require(_isApprovedOrOwner(msg.sender, tokenId) == false);
         // get the sale amount
-        uint256 saleAmount = sellingState[tokenId].buyPrices;
+        uint256 saleAmount = buyPrices[tokenId];
         // check that there is a buy price
         require(saleAmount > 0);
         // check that the buyer sent exact amount to purchase
@@ -410,11 +395,13 @@ contract CortexArt is CRC4Full {
 
     // Owner functions
     // Allow owner to accept the highest bid for a token
-    function acceptBid(uint256 tokenId) external {
-        // can only be accepted when auction ended
-        require(sellingState[tokenId].auctionEndTime <= now);
+    function acceptBid(uint256 tokenId, uint256 minAcceptedAmount) external {
+        // check if sender is owner/approved of token        
+        require(_isApprovedOrOwner(msg.sender, tokenId));
         // check if there's a bid to accept
         require(pendingBids[tokenId].exists);
+        // check that the current pending bid amount is at least what the accepting owner expects
+        require(pendingBids[tokenId].amount >= minAcceptedAmount);
         // process the sale
         onTokenSold(tokenId, pendingBids[tokenId].amount, pendingBids[tokenId].bidder);
     }
@@ -425,7 +412,7 @@ contract CortexArt is CRC4Full {
         // check if sender is owner/approved of token        
         require(_isApprovedOrOwner(msg.sender, tokenId));
         // set the buy price
-        sellingState[tokenId].buyPrices = amount;
+        buyPrices[tokenId] = amount;
         // emit event
         emit BuyPriceSet(tokenId, amount);
     }
@@ -509,7 +496,7 @@ contract CortexArt is CRC4Full {
     // override the default transfer
     function _transferFrom(address from, address to, uint256 tokenId) internal {
         // clear a buy now price
-        sellingState[tokenId].buyPrices = 0;
+        buyPrices[tokenId] = 0;
         // transfer the token
         super._transferFrom(from, to, tokenId);
     }
