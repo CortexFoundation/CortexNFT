@@ -44,6 +44,18 @@ contract CortexArt is CRC4Full {
         uint256 tokenId
     );
 
+    // An event when an auction is created
+    event AuctionCreated (
+        uint256 tokenId,
+        uint256 startTime,
+        uint256 endTime
+    );
+
+    // An event when auction cancelled
+    event AuctionCancelled (
+        uint256 tokenId
+    );
+
     // An event whenever a buy now price has been set
     event BuyPriceSet(
         uint256 tokenId,
@@ -82,6 +94,7 @@ contract CortexArt is CRC4Full {
     // 
     struct SellingState {
         uint256 buyPrices;
+        uint256 auctionStartTime;
         uint256 auctionEndTime;
     }
 
@@ -95,6 +108,10 @@ contract CortexArt is CRC4Full {
         bool exists;
     }
 
+    // The maxium time period an auction can open for
+    uint256 public maximumAuctionPeriod = 7 days;
+    // The maxium time before the auction go live
+    uint256 public maximumAuctionPreparingTime = 3 days;
     // track whether this token was sold the first time or not (used for determining whether to use first or secondary sale percentage)
     mapping(uint256 => bool) public tokenDidHaveFirstSale;
     // if a token's URI has been locked or not
@@ -214,9 +231,14 @@ contract CortexArt is CRC4Full {
     }
 
 
+    function updateMaximumAuctionPeriod(uint256 _newTime) external onlyPlatform {
+        maximumAuctionPeriod = _newTime;
+    }
+
+
     // Allow the platform to update a token's URI if it's not locked yet (for fixing tokens post mint process)
     function updateTokenURI(uint256 tokenId, string tokenURI) external onlyPlatform {
-        // ensure that this token exists
+        // ensure that this token exists 
         require(_exists(tokenId));
         // ensure that the URI for this token is not locked yet
         require(tokenURILocked[tokenId] == false);
@@ -289,11 +311,23 @@ contract CortexArt is CRC4Full {
     }
 
 
-    function openAuction(uint256 _tokenId, uint256 _endTime) external {
+    function openAuction(uint256 _tokenId, uint256 _startTime, uint256 _endTime) external {
         require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
-        require(_endTime > now, "Invalid time period!");
-        require(sellingState[_tokenId].auctionEndTime < now, "Invalid time period!");
+        require((_startTime >= now) && (_startTime - now <= maximumAuctionPreparingTime), "Invlid starting time period!");
+        require((_endTime > _startTime) && (_endTime - _startTime <= maximumAuctionPeriod), "Invalid ending time period!");
+        require((sellingState[_tokenId].auctionEndTime < now) && (sellingState[_tokenId].auctionStartTime < now), "There is an existing auction");
+        sellingState[_tokenId].auctionStartTime = _startTime;
         sellingState[_tokenId].auctionEndTime = _endTime;
+        emit AuctionCreated(_tokenId, _startTime, _endTime);
+    }
+
+
+    function cancelAuction(uint256 _tokenId) external {
+        require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
+        require(sellingState[_tokenId].auctionStartTime >= now, "Too late!");
+        sellingState[_tokenId].auctionEndTime = 0;
+        sellingState[_tokenId].auctionStartTime = 0;
+        emit AuctionCancelled(_tokenId);
     }
 
 
