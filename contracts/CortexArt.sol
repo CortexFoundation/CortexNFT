@@ -39,6 +39,13 @@ contract CortexArt is CRC4Full {
         address bidder
     );
 
+    // An event whenever a bid is proposed
+    event CounterOfferProposed(
+        uint256 tokenId,
+        uint256 offerAmount,
+        address offeror
+    );
+
     // An event whenever an bid is withdrawn
     event BidWithdrawn(
         uint256 tokenId
@@ -93,7 +100,8 @@ contract CortexArt is CRC4Full {
 
     // 
     struct SellingState {
-        uint256 buyPrices;
+        uint256 buyPrice;
+        uint256 reservePrice;
         uint256 auctionStartTime;
         uint256 auctionEndTime;
     }
@@ -102,6 +110,16 @@ contract CortexArt is CRC4Full {
     struct PendingBid {
         // the address of the bidder
         address bidder;
+        // the amount that they bid
+        uint256 amount;
+        // false by default, true once instantiated
+        bool exists;
+    }
+
+    // struct for a pending bid 
+    struct CounterOffer {
+        // the address of the bidder
+        address offeror;
         // the amount that they bid
         uint256 amount;
         // false by default, true once instantiated
@@ -130,6 +148,8 @@ contract CortexArt is CRC4Full {
     mapping(uint256 => SellingState) public sellingState;
     // map a control token ID to its highest bid
     mapping(uint256 => PendingBid) public pendingBids;
+    // map a control token ID to its highest counter offer
+    mapping(uint256 => CounterOffer) public counterOffer;
     // map a control token id to a control token struct
     mapping(uint256 => ControlToken) public controlTokenMapping;    
     // mapping of addresses that are allowed to control tokens on your behalf
@@ -318,6 +338,7 @@ contract CortexArt is CRC4Full {
 
     // Allow the owner to sell a piece through auction
     function openAuction(uint256 _tokenId, uint256 _startTime, uint256 _endTime) external {
+        require(sellingState[_tokenId].buyPrice == 0, "Already have buy price!");
         require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
         require(pendingBids[_tokenId].exists == false, "Sold!");
         require((_startTime >= now) && (_startTime - now <= maximumAuctionPreparingTime), "Invlid starting time period!");
@@ -388,7 +409,7 @@ contract CortexArt is CRC4Full {
         // don't let owners/approved buy their own tokens
         require(_isApprovedOrOwner(msg.sender, tokenId) == false);
         // get the sale amount
-        uint256 saleAmount = sellingState[tokenId].buyPrices;
+        uint256 saleAmount = sellingState[tokenId].buyPrice;
         // check that there is a buy price
         require(saleAmount > 0);
         // check that the buyer sent exact amount to purchase
@@ -466,12 +487,31 @@ contract CortexArt is CRC4Full {
 
     // Allows owner of a control token to set an immediate buy price. Set to 0 to reset.
     function makeBuyPrice(uint256 tokenId, uint256 amount) external {
+        require(sellingState[tokenId].auctionEndTime <= now, "There is an active auction!");
         // check if sender is owner/approved of token        
         require(_isApprovedOrOwner(msg.sender, tokenId));
         // set the buy price
-        sellingState[tokenId].buyPrices = amount;
+        sellingState[tokenId].buyPrice = amount;
         // emit event
         emit BuyPriceSet(tokenId, amount);
+    }
+
+
+    function makeCounterOffer(uint256 _tokenId, uint256 amount) external payable {
+        require(msg.value > sellingState[_tokenId].buyPrice);
+        // don't let owners/approved bid on their own tokens
+        require(_isApprovedOrOwner(msg.sender, _tokenId) == false);
+        // check if there's a high bid
+        if (counterOffer[_tokenId].exists) {
+            // enforce that this bid is higher by at least the minimum required percent increase
+            require(msg.value >= (counterOffer[_tokenId].amount.mul(minBidIncreasePercent.add(100)).div(100)), "Bid must increase by min %");
+            // Return bid amount back to bidder
+            safeFundsTransfer(counterOffer[_tokenId].offeror, counterOffer[_tokenId].amount);
+        }
+        // set the new highest bid
+        counterOffer[_tokenId] = CounterOffer(msg.sender, msg.value, true);
+        // Emit event for the bid proposal
+        emit CounterOfferProposed(_tokenId, msg.value, msg.sender);
     }
 
 
@@ -553,7 +593,7 @@ contract CortexArt is CRC4Full {
     // override the default transfer
     function _transferFrom(address from, address to, uint256 tokenId) internal {
         // clear a buy now price
-        sellingState[tokenId].buyPrices = 0;
+        sellingState[tokenId].buyPrice = 0;
         // transfer the token
         super._transferFrom(from, to, tokenId);
     }
