@@ -270,7 +270,7 @@ contract CortexArt is CRC4Full {
     }
 
 
-    function mintArtwork(uint256 _tokenId, string _artworkTokenURI, uint256 _numUpdates, address[] _controlTokenArtists)
+    function mintArtwork(uint256 _tokenId, string _artworkTokenURI, int256 _numUpdates, address[] _controlTokenArtists)
         external onlyWhitelistedCreator(_tokenId) {
         // Can't mint a token with ID 0 anymore
         require(_tokenId > 0);
@@ -316,6 +316,7 @@ contract CortexArt is CRC4Full {
     }
 
 
+    // Allow the owner to sell a piece through auction
     function openAuction(uint256 _tokenId, uint256 _startTime, uint256 _endTime) external {
         require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
         require(pendingBids[_tokenId].exists == false, "Sold!");
@@ -328,6 +329,7 @@ contract CortexArt is CRC4Full {
     }
 
 
+    // Allow the owner to cancel the auction before it goes live
     function cancelAuction(uint256 _tokenId) external {
         require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
         require(sellingState[_tokenId].auctionStartTime >= now, "Too late!");
