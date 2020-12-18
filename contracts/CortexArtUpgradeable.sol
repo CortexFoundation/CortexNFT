@@ -45,6 +45,18 @@ contract CortexArtUpgradeable is Initializable, CRC4Full {
         uint256 tokenId
     );
 
+    // An event when an auction is created
+    event AuctionCreated (
+        uint256 tokenId,
+        uint256 startTime,
+        uint256 endTime
+    );
+
+    // An event when auction cancelled
+    event AuctionCancelled (
+        uint256 tokenId
+    );
+
     // An event whenever a buy now price has been set
     event BuyPriceSet(
         uint256 tokenId,
@@ -80,6 +92,13 @@ contract CortexArtUpgradeable is Initializable, CRC4Full {
         bool isSetup;
     }
 
+    // 
+    struct SellingState {
+        uint256 buyPrices;
+        uint256 auctionStartTime;
+        uint256 auctionEndTime;
+    }
+
     // struct for a pending bid 
     struct PendingBid {
         // the address of the bidder
@@ -90,12 +109,14 @@ contract CortexArtUpgradeable is Initializable, CRC4Full {
         bool exists;
     }
 
+    // The maxium time period an auction can open for
+    uint256 public maximumAuctionPeriod = 7 days;
+    // The maxium time before the auction go live
+    uint256 public maximumAuctionPreparingTime = 3 days;
     // track whether this token was sold the first time or not (used for determining whether to use first or secondary sale percentage)
     mapping(uint256 => bool) public tokenDidHaveFirstSale;
     // if a token's URI has been locked or not
-    mapping(uint256 => bool) public tokenURILocked;    
-    // map control token ID to its buy price
-    mapping(uint256 => uint256) public buyPrices;    
+    mapping(uint256 => bool) public tokenURILocked;  
     // mapping of addresses to credits for failed transfers
     mapping(address => uint256) public failedTransferCredits;
     // mapping of tokenId to percentage of sale that the platform gets on first sales
@@ -106,6 +127,8 @@ contract CortexArtUpgradeable is Initializable, CRC4Full {
     mapping(uint256 => address) public creatorWhitelist;
     // for each token, holds an array of the creator collaborators. For layer tokens it will likely just be [artist], for master tokens it may hold multiples
     mapping(uint256 => address[]) public uniqueTokenCreators;    
+    // map a control token ID to its selling state
+    mapping(uint256 => SellingState) public sellingState;
     // map a control token ID to its highest bid
     mapping(uint256 => PendingBid) public pendingBids;
     // map a control token id to a control token struct
@@ -127,7 +150,7 @@ contract CortexArtUpgradeable is Initializable, CRC4Full {
         string memory _name, 
         string memory _symbol, 
         uint256 _initialExpectedTokenSupply
-    ) public {
+    ) public initializer {
 
         // starting royalty amounts
         artistSecondSalePercentage = 10;
@@ -155,6 +178,11 @@ contract CortexArtUpgradeable is Initializable, CRC4Full {
     modifier onlyWhitelistedCreator(uint256 _tokenId) {
         require(creatorWhitelist[_tokenId] == msg.sender);
         _;
+    }
+
+
+    function getTokenImageHistoryLength(uint256 _tokenId) public view returns(uint256) {
+        return controlTokenMapping[_tokenId].imageHistroies.length;
     }
 
 
@@ -209,9 +237,14 @@ contract CortexArtUpgradeable is Initializable, CRC4Full {
     }
 
 
+    function updateMaximumAuctionPeriod(uint256 _newTime) external onlyPlatform {
+        maximumAuctionPeriod = _newTime;
+    }
+
+
     // Allow the platform to update a token's URI if it's not locked yet (for fixing tokens post mint process)
     function updateTokenURI(uint256 tokenId, string tokenURI) external onlyPlatform {
-        // ensure that this token exists
+        // ensure that this token exists 
         require(_exists(tokenId));
         // ensure that the URI for this token is not locked yet
         require(tokenURILocked[tokenId] == false);
@@ -238,7 +271,7 @@ contract CortexArtUpgradeable is Initializable, CRC4Full {
     }
 
 
-    function mintArtwork(uint256 _tokenId, string _artworkTokenURI, address[] _controlTokenArtists)
+    function mintArtwork(uint256 _tokenId, string _artworkTokenURI, int256 _numUpdates, address[] _controlTokenArtists)
         external onlyWhitelistedCreator(_tokenId) {
         // Can't mint a token with ID 0 anymore
         require(_tokenId > 0);
@@ -257,7 +290,7 @@ contract CortexArtUpgradeable is Initializable, CRC4Full {
             ControlToken storage controlToken = controlTokenMapping[_tokenId];
             // add the initially generated image
             controlToken.imageHistroies.push(_artworkTokenURI);
-            controlToken.numRemainingUpdates = 0;
+            controlToken.numRemainingUpdates = _numUpdates;
             // stub in an existing control token so exists is true
             controlToken.exists = true;
             controlToken.isSetup = false;
@@ -284,10 +317,37 @@ contract CortexArtUpgradeable is Initializable, CRC4Full {
     }
 
 
+    // Allow the owner to sell a piece through auction
+    function openAuction(uint256 _tokenId, uint256 _startTime, uint256 _endTime) external {
+        require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
+        require(pendingBids[_tokenId].exists == false, "Sold!");
+        require((_startTime >= now) && (_startTime - now <= maximumAuctionPreparingTime), "Invlid starting time period!");
+        require((_endTime > _startTime) && (_endTime - _startTime <= maximumAuctionPeriod), "Invalid ending time period!");
+        require((sellingState[_tokenId].auctionEndTime < now) && (sellingState[_tokenId].auctionStartTime < now), "There is an existing auction");
+        sellingState[_tokenId].auctionStartTime = _startTime;
+        sellingState[_tokenId].auctionEndTime = _endTime;
+        emit AuctionCreated(_tokenId, _startTime, _endTime);
+    }
+
+
+    // Allow the owner to cancel the auction before it goes live
+    function cancelAuction(uint256 _tokenId) external {
+        require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
+        require(sellingState[_tokenId].auctionStartTime >= now, "Too late!");
+        sellingState[_tokenId].auctionEndTime = 0;
+        sellingState[_tokenId].auctionStartTime = 0;
+        emit AuctionCancelled(_tokenId);
+    }
+
+
     // Bidder functions
     function bid(uint256 tokenId) external payable {
         // don't allow bids of 0
         require(msg.value > 0);
+        // Check for auction expiring time
+        require(sellingState[tokenId].auctionStartTime >= now, "Auction hasn't started!");
+        // Check for auction expiring time
+        require(sellingState[tokenId].auctionEndTime <= now, "Auction expired!");
         // don't let owners/approved bid on their own tokens
         require(_isApprovedOrOwner(msg.sender, tokenId) == false);
         // check if there's a high bid
@@ -307,7 +367,7 @@ contract CortexArtUpgradeable is Initializable, CRC4Full {
     // allows an address with a pending bid to withdraw it
     function withdrawBid(uint256 tokenId) external {
         // check that there is a bid from the sender to withdraw (also allows platform address to withdraw a bid on someone's behalf)
-        require((pendingBids[tokenId].bidder == msg.sender) || (msg.sender == platformAddress));
+        require(msg.sender == platformAddress);
         // attempt to withdraw the bid
         _withdrawBid(tokenId);        
     }
@@ -329,7 +389,7 @@ contract CortexArtUpgradeable is Initializable, CRC4Full {
         // don't let owners/approved buy their own tokens
         require(_isApprovedOrOwner(msg.sender, tokenId) == false);
         // get the sale amount
-        uint256 saleAmount = buyPrices[tokenId];
+        uint256 saleAmount = sellingState[tokenId].buyPrices;
         // check that there is a buy price
         require(saleAmount > 0);
         // check that the buyer sent exact amount to purchase
@@ -395,13 +455,11 @@ contract CortexArtUpgradeable is Initializable, CRC4Full {
 
     // Owner functions
     // Allow owner to accept the highest bid for a token
-    function acceptBid(uint256 tokenId, uint256 minAcceptedAmount) external {
-        // check if sender is owner/approved of token        
-        require(_isApprovedOrOwner(msg.sender, tokenId));
+    function acceptBid(uint256 tokenId) external {
+        // can only be accepted when auction ended
+        require(sellingState[tokenId].auctionEndTime <= now);
         // check if there's a bid to accept
         require(pendingBids[tokenId].exists);
-        // check that the current pending bid amount is at least what the accepting owner expects
-        require(pendingBids[tokenId].amount >= minAcceptedAmount);
         // process the sale
         onTokenSold(tokenId, pendingBids[tokenId].amount, pendingBids[tokenId].bidder);
     }
@@ -412,7 +470,7 @@ contract CortexArtUpgradeable is Initializable, CRC4Full {
         // check if sender is owner/approved of token        
         require(_isApprovedOrOwner(msg.sender, tokenId));
         // set the buy price
-        buyPrices[tokenId] = amount;
+        sellingState[tokenId].buyPrices = amount;
         // emit event
         emit BuyPriceSet(tokenId, amount);
     }
@@ -446,7 +504,7 @@ contract CortexArtUpgradeable is Initializable, CRC4Full {
         ControlToken storage controlToken = controlTokenMapping[controlTokenId];
         // check that number of uses for control token is either infinite or is positive
         require((controlToken.numRemainingUpdates == -1) || (controlToken.numRemainingUpdates > 0), "No more updates allowed");   
-        _setTokenURI(controlTokenId.add(1), _newTokenURI);
+        controlToken.imageHistroies.push(_newTokenURI);
         // if there's a payment then send it to the platform (for higher priority updates)
         if (msg.value > 0) {
             safeFundsTransfer(platformAddress, msg.value);
@@ -496,7 +554,7 @@ contract CortexArtUpgradeable is Initializable, CRC4Full {
     // override the default transfer
     function _transferFrom(address from, address to, uint256 tokenId) internal {
         // clear a buy now price
-        buyPrices[tokenId] = 0;
+        sellingState[tokenId].buyPrices = 0;
         // transfer the token
         super._transferFrom(from, to, tokenId);
     }
