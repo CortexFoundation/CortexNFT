@@ -1,7 +1,7 @@
 pragma solidity ^0.4.24;
 
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
-import "./ICRC3.sol";
+import "../utils/ICRC3.sol";
 
 /**
  * @dev Implementation of the `ICRC3` interface.
@@ -20,7 +20,7 @@ contract CRC3Upgradeable is Initializable, ICRC3 {
      */
     mapping(bytes4 => bool) private _supportedInterfaces;
 
-    function initialize () internal {
+    function initialize () public {
         // Derived contracts need only register support for their own interfaces,
         // we register support for CRC3 itself here
         _registerInterface(_INTERFACE_ID_CRC3);

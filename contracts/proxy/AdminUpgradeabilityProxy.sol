@@ -100,7 +100,7 @@ contract AdminUpgradeabilityProxy is UpgradeabilityProxy {
    */
   function upgradeToAndCall(address newImplementation, bytes data) payable external ifAdmin {
     _upgradeTo(newImplementation);
-    (bool success,) = newImplementation.delegatecall(data);
+    bool success = newImplementation.delegatecall(data);
     require(success);
   }
 
