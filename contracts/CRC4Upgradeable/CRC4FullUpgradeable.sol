@@ -16,6 +16,6 @@ contract CRC4FullUpgradeable is Initializable, CRC4Upgradeable, CRC4MetadataUpgr
         CRC4Upgradeable.initialize();
         CRC4MetadataUpgradeable.initialize(name, symbol);
         CRC4EnumerableUpgradeable.initialize();
-
     }
+    
 }

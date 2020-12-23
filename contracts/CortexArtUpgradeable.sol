@@ -1,9 +1,9 @@
 pragma solidity ^0.4.24;
 
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
-import "./CRC4/CRC4Full.sol";
+import "./CRC4Upgradeable/CRC4FullUpgradeable.sol";
 
-contract CortexArtUpgradeable is Initializable, CRC4Full {
+contract CortexArtUpgradeable is Initializable, CRC4FullUpgradeable {
     // An event whenever the platform address is updated
     event PlatformAddressUpdated(
         address platformAddress
@@ -151,6 +151,7 @@ contract CortexArtUpgradeable is Initializable, CRC4Full {
         string memory _symbol, 
         uint256 _initialExpectedTokenSupply
     ) public initializer {
+        CRC4FullUpgradeable.initialize(_name, _symbol);
 
         // starting royalty amounts
         artistSecondSalePercentage = 10;
