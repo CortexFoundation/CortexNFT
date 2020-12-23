@@ -2,12 +2,12 @@ pragma solidity ^0.4.24;
 
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
 
+import "./CRC3Upgradeable.sol";
 import "../CRC4/ICRC4.sol";
 import "../CRC4/ICRC4Receiver.sol";
 import "../utils/SafeMath.sol";
 import "../utils/Address.sol";
 import "../utils/Counters.sol";
-import "./CRC3Upgradeable.sol";
 
 /**
  * @title CRC4 Non-Fungible Token Standard basic implementation
@@ -50,11 +50,16 @@ contract CRC4Upgradeable is Initializable, CRC3Upgradeable, ICRC4 {
      */
     bytes4 private constant _INTERFACE_ID_CRC4 = 0x80ac58cd;
 
-    function initialize () public {
+    function initialize () public initializer {
         CRC3Upgradeable.initialize();
         // register the supported interfaces to conform to CRC4 via CRC3
         _registerInterface(_INTERFACE_ID_CRC4);
     }
+
+    function _hasBeenInitialized() internal view returns (bool) {
+        return supportsInterface(_INTERFACE_ID_CRC4);
+    }
+
 
     /**
      * @dev Gets the balance of the specified address.

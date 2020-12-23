@@ -1,6 +1,7 @@
 pragma solidity ^0.4.24;
 
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
+
 import "../utils/ICRC3.sol";
 
 /**
@@ -20,7 +21,7 @@ contract CRC3Upgradeable is Initializable, ICRC3 {
      */
     mapping(bytes4 => bool) private _supportedInterfaces;
 
-    function initialize () public {
+    function initialize () public initializer {
         // Derived contracts need only register support for their own interfaces,
         // we register support for CRC3 itself here
         _registerInterface(_INTERFACE_ID_CRC3);
@@ -31,7 +32,7 @@ contract CRC3Upgradeable is Initializable, ICRC3 {
      *
      * Time complexity O(1), guaranteed to always use less than 30 000 gas.
      */
-    function supportsInterface(bytes4 interfaceId) external view returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view returns (bool) {
         return _supportedInterfaces[interfaceId];
     }
 
