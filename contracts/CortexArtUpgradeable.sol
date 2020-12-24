@@ -384,31 +384,31 @@ contract CortexArtUpgradeable is Initializable, CRC4FullUpgradeable {
         emit BidWithdrawn(tokenId);
     }
 
-    // Buy the artwork for the currently set price
-    // Allows the buyer to specify an expected remaining uses they'll accept
-    function takeBuyPrice(uint256 tokenId, int256 expectedRemainingUpdates) external payable {
-        // don't let owners/approved buy their own tokens
-        require(_isApprovedOrOwner(msg.sender, tokenId) == false);
-        // get the sale amount
-        uint256 saleAmount = sellingState[tokenId].buyPrices;
-        // check that there is a buy price
-        require(saleAmount > 0);
-        // check that the buyer sent exact amount to purchase
-        require(msg.value == saleAmount);
-        // if this is a control token
-        if (controlTokenMapping[tokenId].exists) {
-            // ensure that the remaining uses on the token is equal to what buyer expects
-            require(controlTokenMapping[tokenId].numRemainingUpdates >= expectedRemainingUpdates);
-        }
-        // Return all highest bidder's money
-        if (pendingBids[tokenId].exists) {
-            // Return bid amount back to bidder
-            safeFundsTransfer(pendingBids[tokenId].bidder, pendingBids[tokenId].amount);
-            // clear highest bid
-            pendingBids[tokenId] = PendingBid(address(0), 0, false);
-        }
-        onTokenSold(tokenId, saleAmount, msg.sender);
-    }
+    // // Buy the artwork for the currently set price
+    // // Allows the buyer to specify an expected remaining uses they'll accept
+    // function takeBuyPrice(uint256 tokenId, int256 expectedRemainingUpdates) external payable {
+    //     // don't let owners/approved buy their own tokens
+    //     require(_isApprovedOrOwner(msg.sender, tokenId) == false);
+    //     // get the sale amount
+    //     uint256 saleAmount = sellingState[tokenId].buyPrices;
+    //     // check that there is a buy price
+    //     require(saleAmount > 0);
+    //     // check that the buyer sent exact amount to purchase
+    //     require(msg.value == saleAmount);
+    //     // if this is a control token
+    //     if (controlTokenMapping[tokenId].exists) {
+    //         // ensure that the remaining uses on the token is equal to what buyer expects
+    //         require(controlTokenMapping[tokenId].numRemainingUpdates >= expectedRemainingUpdates);
+    //     }
+    //     // Return all highest bidder's money
+    //     if (pendingBids[tokenId].exists) {
+    //         // Return bid amount back to bidder
+    //         safeFundsTransfer(pendingBids[tokenId].bidder, pendingBids[tokenId].amount);
+    //         // clear highest bid
+    //         pendingBids[tokenId] = PendingBid(address(0), 0, false);
+    //     }
+    //     onTokenSold(tokenId, saleAmount, msg.sender);
+    // }
 
 
     // Take an amount and distribute it evenly amongst a list of creator addresses
@@ -454,16 +454,16 @@ contract CortexArtUpgradeable is Initializable, CRC4FullUpgradeable {
     }
 
 
-    // Owner functions
-    // Allow owner to accept the highest bid for a token
-    function acceptBid(uint256 tokenId) external {
-        // can only be accepted when auction ended
-        require(sellingState[tokenId].auctionEndTime <= now);
-        // check if there's a bid to accept
-        require(pendingBids[tokenId].exists);
-        // process the sale
-        onTokenSold(tokenId, pendingBids[tokenId].amount, pendingBids[tokenId].bidder);
-    }
+    // // Owner functions
+    // // Allow owner to accept the highest bid for a token
+    // function acceptBid(uint256 tokenId) external {
+    //     // can only be accepted when auction ended
+    //     require(sellingState[tokenId].auctionEndTime <= now);
+    //     // check if there's a bid to accept
+    //     require(pendingBids[tokenId].exists);
+    //     // process the sale
+    //     onTokenSold(tokenId, pendingBids[tokenId].amount, pendingBids[tokenId].bidder);
+    // }
 
 
     // Allows owner of a control token to set an immediate buy price. Set to 0 to reset.
@@ -493,38 +493,38 @@ contract CortexArtUpgradeable is Initializable, CRC4FullUpgradeable {
     }
 
 
-    // Allows owner (or permissioned user) of a control token to update its lever values
-    // Optionally accept a payment to increase speed of rendering priority
-    function useControlToken(uint256 controlTokenId, string _newTokenURI) external payable {
-        // check if sender is owner/approved of token OR if they're a permissioned controller for the token owner      
-        require(_isApprovedOrOwner(msg.sender, controlTokenId) || (permissionedControllers[ownerOf(controlTokenId)][controlTokenId] == msg.sender),
-            "Owner or permissioned only");
-        // check if control exists
-        require(controlTokenMapping[controlTokenId].exists, "Token does not exist.");
-        // get the control token reference
-        ControlToken storage controlToken = controlTokenMapping[controlTokenId];
-        // check that number of uses for control token is either infinite or is positive
-        require((controlToken.numRemainingUpdates == -1) || (controlToken.numRemainingUpdates > 0), "No more updates allowed");   
-        controlToken.imageHistroies.push(_newTokenURI);
-        // if there's a payment then send it to the platform (for higher priority updates)
-        if (msg.value > 0) {
-            safeFundsTransfer(platformAddress, msg.value);
-        }
+    // // Allows owner (or permissioned user) of a control token to update its lever values
+    // // Optionally accept a payment to increase speed of rendering priority
+    // function useControlToken(uint256 controlTokenId, string _newTokenURI) external payable {
+    //     // check if sender is owner/approved of token OR if they're a permissioned controller for the token owner      
+    //     require(_isApprovedOrOwner(msg.sender, controlTokenId) || (permissionedControllers[ownerOf(controlTokenId)][controlTokenId] == msg.sender),
+    //         "Owner or permissioned only");
+    //     // check if control exists
+    //     require(controlTokenMapping[controlTokenId].exists, "Token does not exist.");
+    //     // get the control token reference
+    //     ControlToken storage controlToken = controlTokenMapping[controlTokenId];
+    //     // check that number of uses for control token is either infinite or is positive
+    //     require((controlToken.numRemainingUpdates == -1) || (controlToken.numRemainingUpdates > 0), "No more updates allowed");   
+    //     controlToken.imageHistroies.push(_newTokenURI);
+    //     // if there's a payment then send it to the platform (for higher priority updates)
+    //     if (msg.value > 0) {
+    //         safeFundsTransfer(platformAddress, msg.value);
+    //     }
 
-        // if this control token is finite in its uses
-        if (controlToken.numRemainingUpdates > 0) {
-            // decrease it down by 1
-            controlToken.numRemainingUpdates = controlToken.numRemainingUpdates - 1;
+    //     // if this control token is finite in its uses
+    //     if (controlToken.numRemainingUpdates > 0) {
+    //         // decrease it down by 1
+    //         controlToken.numRemainingUpdates = controlToken.numRemainingUpdates - 1;
 
-            // since we used one of those updates, withdraw any existing bid for this token if exists
-            if (pendingBids[controlTokenId].exists) {
-                _withdrawBid(controlTokenId);
-            }
-        }
+    //         // since we used one of those updates, withdraw any existing bid for this token if exists
+    //         if (pendingBids[controlTokenId].exists) {
+    //             _withdrawBid(controlTokenId);
+    //         }
+    //     }
 
-        // emit event
-        emit ControlImageUpdated(controlTokenId, msg.value, controlToken.numRemainingUpdates, _newTokenURI);
-    }
+    //     // emit event
+    //     emit ControlImageUpdated(controlTokenId, msg.value, controlToken.numRemainingUpdates, _newTokenURI);
+    // }
 
 
     // Allows a user to withdraw all failed transaction credits
