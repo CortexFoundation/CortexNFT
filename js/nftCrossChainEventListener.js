@@ -5,9 +5,7 @@ const nftArtifact = require('../build/contracts/Artwork.json');
 
 var account = require("./account.json");
 
-// const providerSource = new Web3.providers.HttpProvider('http://web3.cortexlabs.ai:30089');
-// 主网内网节点：
-const providerSource = new Web3.providers.HttpProvider('http://storage.cortexlabs.ai:30089');
+const providerSource = new Web3.providers.HttpProvider('http://web3.cortexlabs.ai:30089');
 // const providerSource = new Web3.providers.HttpProvider('HTTP://127.0.0.1:7545');
 const web3Source = new Web3(providerSource);
 
@@ -17,8 +15,6 @@ const providerCrossChain = new Web3.providers.HttpProvider('https://kovan.infura
 const web3CrossChain = new Web3(providerCrossChain);
 
 var blockCount = 2812917;
-// var fromAddr = "0xC635adD7f26F53658e7C6DaDdE3673A1F597e364";
-// var privateKey = "1b61de2dddde7cad05e6fa4f14f544c6f728605c820b233a2a61d1df6f7faaf5";
 var fromAddr = account.address;
 var privateKey = account.privateKey;
 var crossChainControllerSourceAddr = "0x0f7457e3ca76c07ee4a69c03370308471905bb45";
