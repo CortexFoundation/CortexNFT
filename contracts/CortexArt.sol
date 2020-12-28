@@ -318,7 +318,7 @@ contract CortexArt is CRC4Full {
 
 
     // Allow the owner to sell a piece through auction
-    function openAuction(uint256 _tokenId, uint256 _startTime, uint256 _endTime) external {
+    function openAuction(uint256 _tokenId, uint256 _startTime, uint256 _endTime, uint256 _reservePrice) external {
         require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
         require(pendingBids[_tokenId].exists == false, "Sold!");
         require((_startTime >= now) && (_startTime - now <= maximumAuctionPreparingTime), "Invlid starting time period!");
@@ -326,6 +326,7 @@ contract CortexArt is CRC4Full {
         require((sellingState[_tokenId].auctionEndTime < now) && (sellingState[_tokenId].auctionStartTime < now), "There is an existing auction");
         sellingState[_tokenId].auctionStartTime = _startTime;
         sellingState[_tokenId].auctionEndTime = _endTime;
+        sellingState[_tokenId].reservePrice = _reservePrice;
         emit AuctionCreated(_tokenId, _startTime, _endTime);
     }
 
