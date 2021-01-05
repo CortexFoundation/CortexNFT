@@ -10,5 +10,5 @@ module.exports = async function(deployer, network, accounts) {
     await art.mintArtwork(1, "newToken", 0, [artist], {from: artist});
     let currentTime = Math.floor(Date.now() / 1000);
     console.log(currentTime);
-    await art.openAuction(1, currentTime + 100, currentTime + 400, {from: artist});
+    await art.openAuction(1, currentTime + 100, currentTime + 400, 0, {from: artist});
 };
