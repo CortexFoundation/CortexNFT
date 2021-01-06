@@ -447,6 +447,8 @@ contract CortexArt is CRC4Full {
         }
         // clear highest bid
         pendingBids[tokenId] = PendingBid(address(0), 0, false);
+        // clear selling state
+        sellingState[tokenId] = SellingState(0, 0, 0, 0);
         // Transfer token to msg.sender
         _transferFrom(ownerOf(tokenId), to, tokenId);
         // Emit event
