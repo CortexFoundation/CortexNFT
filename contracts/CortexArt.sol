@@ -17,6 +17,7 @@ contract CortexArt is CRC4Full {
     // An event whenever a creator is whitelisted with the token id and the layer count
     event CreatorWhitelisted(
         uint256 tokenId,
+        uint256 layerCount,
         address creator
     );
 
@@ -89,9 +90,23 @@ contract CortexArt is CRC4Full {
         bool exists;
         // false by default, true once setup by the artist
         bool isSetup;
+        // the levers that this control token can use
+        mapping(uint256 => ControlLever) levers;
     }
 
-    // 
+    // struct for a lever on a control token that can be changed
+    struct ControlLever {
+        // // The minimum value this token can have (inclusive)
+        int256 minValue;
+        // The maximum value this token can have (inclusive)
+        int256 maxValue;
+        // The current value for this token
+        int256 currentValue;
+        // false by default, true once instantiated
+        bool exists;
+    }
+
+    // strcut for the selling state of the artwork
     struct SellingState {
         uint256 buyPrice;
         uint256 reservePrice;
@@ -109,6 +124,13 @@ contract CortexArt is CRC4Full {
         bool exists;
     }
 
+    struct WhitelistReservation {
+        // the address of the creator
+        address creator;
+        // the amount of layers they're expected to mint
+        uint256 layerCount;
+    }
+
     // The maxium time period an auction can open for
     uint256 public maximumAuctionPeriod = 7 days;
     // The maxium time before the auction go live
@@ -124,7 +146,7 @@ contract CortexArt is CRC4Full {
     // mapping of tokenId to percentage of sale that the platform gets on secondary sales
     mapping(uint256 => uint256) public platformSecondSalePercentages;
     // what tokenId creators are allowed to mint (and how many layers)
-    mapping(uint256 => address) public creatorWhitelist;
+    mapping(uint256 => WhitelistReservation) public creatorWhitelist;
     // for each token, holds an array of the creator collaborators. For layer tokens it will likely just be [artist], for master tokens it may hold multiples
     mapping(uint256 => address[]) public uniqueTokenCreators;    
     // map a control token ID to its selling state
@@ -175,8 +197,9 @@ contract CortexArt is CRC4Full {
     }
 
 
-    modifier onlyWhitelistedCreator(uint256 _tokenId) {
-        require(creatorWhitelist[_tokenId] == msg.sender);
+    modifier onlyWhitelistedCreator(uint256 masterTokenId, uint256 layerCount) {
+        require(creatorWhitelist[masterTokenId].creator == msg.sender);
+        require(creatorWhitelist[masterTokenId].layerCount == layerCount);
         _;
     }
 
@@ -187,19 +210,21 @@ contract CortexArt is CRC4Full {
 
 
     // reserve a tokenID and layer count for a creator. Define a platform royalty percentage per art piece (some pieces have higher or lower amount)
-    function whitelistTokenForCreator(address creator, uint256 _tokenId, 
+    function whitelistTokenForCreator(address creator, uint256 masterTokenId, uint256 layerCount, 
         uint256 platformFirstSalePercentage, uint256 platformSecondSalePercentage) external onlyPlatform {
         // the tokenID we're reserving must be the current expected token supply
-        require(_tokenId == expectedTokenSupply);
+        require(masterTokenId == expectedTokenSupply);
+        // Async pieces must have at least 1 layer
+        require (layerCount > 0);
         // reserve the tokenID for this creator
-        creatorWhitelist[_tokenId] = creator;
+        creatorWhitelist[masterTokenId] = WhitelistReservation(creator, layerCount);
         // increase the expected token supply
-        expectedTokenSupply = _tokenId.add(2);
+        expectedTokenSupply = masterTokenId.add(layerCount).add(1);
         // define the platform percentages for this token here
-        platformFirstSalePercentages[_tokenId] = platformFirstSalePercentage;
-        platformSecondSalePercentages[_tokenId] = platformSecondSalePercentage;
+        platformFirstSalePercentages[masterTokenId] = platformFirstSalePercentage;
+        platformSecondSalePercentages[masterTokenId] = platformSecondSalePercentage;
 
-        emit CreatorWhitelisted(_tokenId, creator);
+        emit CreatorWhitelisted(masterTokenId, layerCount, creator);
     }
 
 
@@ -272,7 +297,7 @@ contract CortexArt is CRC4Full {
 
 
     function mintArtwork(uint256 _tokenId, string _artworkTokenURI, int256 _numUpdates, address[] _controlTokenArtists)
-        external onlyWhitelistedCreator(_tokenId) {
+        external onlyWhitelistedCreator(_tokenId, _controlTokenArtists.length) {
         // Can't mint a token with ID 0 anymore
         require(_tokenId > 0);
         // Mint the token that represents ownership of the entire artwork    
