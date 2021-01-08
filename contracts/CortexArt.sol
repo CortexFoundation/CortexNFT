@@ -82,8 +82,8 @@ contract CortexArt is CRC4Full {
 
     // struct for a token that controls part of the artwork
     struct ControlToken {
-        // ipfs hashes for all images
-        string[] imageHistroies;
+        // number that tracks how many levers there are
+        uint256 numControlLevers;
         // The number of update calls this token has (-1 for infinite)
         int256 numRemainingUpdates;
         // false by default, true once instantiated
@@ -204,11 +204,6 @@ contract CortexArt is CRC4Full {
     }
 
 
-    function getTokenImageHistoryLength(uint256 _tokenId) public view returns(uint256) {
-        return controlTokenMapping[_tokenId].imageHistroies.length;
-    }
-
-
     // reserve a tokenID and layer count for a creator. Define a platform royalty percentage per art piece (some pieces have higher or lower amount)
     function whitelistTokenForCreator(address creator, uint256 masterTokenId, uint256 layerCount, 
         uint256 platformFirstSalePercentage, uint256 platformSecondSalePercentage) external onlyPlatform {
@@ -295,6 +290,49 @@ contract CortexArt is CRC4Full {
         emit ArtistSecondSalePercentUpdated(artistSecondSalePercentage);
     }
 
+    function setupControlToken(uint256 controlTokenId, string controlTokenURI,
+        int256[] leverMinValues,
+        int256[] leverMaxValues,
+        int256 numAllowedUpdates,
+        address[] additionalCollaborators
+    ) external {
+        // Hard cap the number of levers a single control token can have
+        require (leverMinValues.length <= 500, "Too many control levers.");
+        // Hard cap the number of collaborators a single control token can have
+        require (additionalCollaborators.length <= 50, "Too many collaborators.");
+        // check that a control token exists for this token id
+        require(controlTokenMapping[controlTokenId].exists, "No control token found");
+        // ensure that this token is not setup yet
+        require(controlTokenMapping[controlTokenId].isSetup == false, "Already setup");
+        // ensure that only the control token artist is attempting this mint
+        require(uniqueTokenCreators[controlTokenId][0] == msg.sender, "Must be control token artist");
+        // enforce that the length of all the array lengths are equal
+        require(leverMinValues.length == leverMaxValues.length, "Values array mismatch");
+        // require the number of allowed updates to be infinite (-1) or some finite number
+        require((numAllowedUpdates == -1) || (numAllowedUpdates > 0), "Invalid allowed updates");
+        // mint the control token here
+        super._safeMint(msg.sender, controlTokenId);
+        // set token URI
+        super._setTokenURI(controlTokenId, controlTokenURI);        
+        // create the control token
+        controlTokenMapping[controlTokenId] = ControlToken(leverMinValues.length, numAllowedUpdates, true, true);
+        // create the control token levers now
+        for (uint256 k = 0; k < leverMinValues.length; k++) {
+            // enforce that maxValue is greater than or equal to minValue
+            require(leverMaxValues[k] >= leverMinValues[k], "Max val must >= min");
+            // add the lever to this token
+            controlTokenMapping[controlTokenId].levers[k] = ControlLever(leverMinValues[k],
+                leverMaxValues[k], leverMinValues[k], true);
+        }
+        // the control token artist can optionally specify additional collaborators on this layer
+        for (uint256 i = 0; i < additionalCollaborators.length; i++) {
+            // can't provide burn address as collaborator
+            require(additionalCollaborators[i] != address(0));
+
+            uniqueTokenCreators[controlTokenId].push(additionalCollaborators[i]);
+        }
+    }
+
 
     function mintArtwork(uint256 _tokenId, string _artworkTokenURI, int256 _numUpdates, address[] _controlTokenArtists)
         external onlyWhitelistedCreator(_tokenId, _controlTokenArtists.length) {
@@ -313,8 +351,6 @@ contract CortexArt is CRC4Full {
             // add this control token artist to the unique creator list for that control token
             uniqueTokenCreators[_tokenId].push(_controlTokenArtists[i]);
             ControlToken storage controlToken = controlTokenMapping[_tokenId];
-            // add the initially generated image
-            controlToken.imageHistroies.push(_artworkTokenURI);
             controlToken.numRemainingUpdates = _numUpdates;
             // stub in an existing control token so exists is true
             controlToken.exists = true;
@@ -531,8 +567,7 @@ contract CortexArt is CRC4Full {
         // get the control token reference
         ControlToken storage controlToken = controlTokenMapping[controlTokenId];
         // check that number of uses for control token is either infinite or is positive
-        require((controlToken.numRemainingUpdates == -1) || (controlToken.numRemainingUpdates > 0), "No more updates allowed");   
-        controlToken.imageHistroies.push(_newTokenURI);
+        require((controlToken.numRemainingUpdates == -1) || (controlToken.numRemainingUpdates > 0), "No more updates allowed");
         // if there's a payment then send it to the platform (for higher priority updates)
         if (msg.value > 0) {
             safeFundsTransfer(platformAddress, msg.value);
