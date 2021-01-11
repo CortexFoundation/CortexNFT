@@ -346,11 +346,8 @@ contract CortexArt is CRC4Full {
             require(_controlTokenArtists[i] != address(0));
             // add this control token artist to the unique creator list for that control token
             uniqueTokenCreators[_tokenId].push(_controlTokenArtists[i]);
-            ControlToken storage controlToken = controlTokenMapping[_tokenId];
-            controlToken.numRemainingUpdates = _numUpdates;
             // stub in an existing control token so exists is true
-            controlToken.exists = true;
-            controlToken.isSetup = false;
+            controlTokenMapping[_tokenId] = ControlToken(0, 0, true, false);
 
             // Layer control tokens use the same royalty percentage as the master token
             platformFirstSalePercentages[_tokenId] = platformFirstSalePercentages[_tokenId];

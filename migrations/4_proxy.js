@@ -9,8 +9,8 @@ module.exports = async function(deployer, network, accounts) {
     // await deployer.deploy(CRC);
 
     // return;
-    await deployer.deploy(Art);
+    // await deployer.deploy(Art);
     // let art = await Art.deployed();
     // console.log(art.address);
-    // await deployer.deploy(Proxy, "0x14c30d15A3BF2Fd99ebe66B1C60674D9BBF89332", owner, "0x");
+    await deployer.deploy(Proxy, "0x8458b580162Ce815B1b1dc655149aB83FD57FB2d", owner, "0x");
 };
