@@ -18,6 +18,7 @@ contract CortexArtUpgradeable is Initializable, CRC4FullUpgradeable {
     // An event whenever a creator is whitelisted with the token id and the layer count
     event CreatorWhitelisted(
         uint256 tokenId,
+        uint256 layerCount,
         address creator
     );
 
@@ -73,26 +74,49 @@ contract CortexArtUpgradeable is Initializable, CRC4FullUpgradeable {
         address buyer
     );
 
-    event ControlImageUpdated(
+    // An event whenever a control token has been updated
+    event ControlLeverUpdated(
+        // the id of the token
         uint256 tokenId,
-        uint256 tips,
+        // an optional amount that the updater sent to boost priority of the rendering
+        uint256 priorityTip,
+        // the number of times this control lever can now be updated
         int256 numRemainingUpdates,
-        string newTokenURI
+        // the ids of the levers that were updated
+        uint256[] leverIds,        
+        // the previous values that the levers had before this update (for clients who want to animate the change)
+        int256[] previousValues,
+        // the new updated value
+        int256[] updatedValues
     );
 
     // struct for a token that controls part of the artwork
     struct ControlToken {
-        // ipfs hashes for all images
-        string[] imageHistroies;
+        // number that tracks how many levers there are
+        uint256 numControlLevers;
         // The number of update calls this token has (-1 for infinite)
         int256 numRemainingUpdates;
         // false by default, true once instantiated
         bool exists;
         // false by default, true once setup by the artist
         bool isSetup;
+        // the levers that this control token can use
+        mapping(uint256 => ControlLever) levers;
     }
 
-    // 
+    // struct for a lever on a control token that can be changed
+    struct ControlLever {
+        // // The minimum value this token can have (inclusive)
+        int256 minValue;
+        // The maximum value this token can have (inclusive)
+        int256 maxValue;
+        // The current value for this token
+        int256 currentValue;
+        // false by default, true once instantiated
+        bool exists;
+    }
+
+    // strcut for the selling state of the artwork
     struct SellingState {
         uint256 buyPrice;
         uint256 reservePrice;
@@ -177,31 +201,22 @@ contract CortexArtUpgradeable is Initializable, CRC4FullUpgradeable {
     }
 
 
-    modifier onlyWhitelistedCreator(uint256 _tokenId) {
-        require(creatorWhitelist[_tokenId] == msg.sender);
-        _;
-    }
-
-
-    function getTokenImageHistoryLength(uint256 _tokenId) public view returns(uint256) {
-        return controlTokenMapping[_tokenId].imageHistroies.length;
-    }
-
-
     // reserve a tokenID and layer count for a creator. Define a platform royalty percentage per art piece (some pieces have higher or lower amount)
-    function whitelistTokenForCreator(address creator, uint256 _tokenId, 
+    function whitelistTokenForCreator(address creator, uint256 masterTokenId, uint256 layerCount, 
         uint256 platformFirstSalePercentage, uint256 platformSecondSalePercentage) external onlyPlatform {
         // the tokenID we're reserving must be the current expected token supply
-        require(_tokenId == expectedTokenSupply);
+        require(masterTokenId == expectedTokenSupply);
+        // Async pieces must have at least 1 layer
+        require (layerCount > 0);
         // reserve the tokenID for this creator
-        creatorWhitelist[_tokenId] = creator;
+        creatorWhitelist[masterTokenId] == creator;
         // increase the expected token supply
-        expectedTokenSupply = _tokenId.add(2);
+        expectedTokenSupply = masterTokenId.add(layerCount).add(1);
         // define the platform percentages for this token here
-        platformFirstSalePercentages[_tokenId] = platformFirstSalePercentage;
-        platformSecondSalePercentages[_tokenId] = platformSecondSalePercentage;
+        platformFirstSalePercentages[masterTokenId] = platformFirstSalePercentage;
+        platformSecondSalePercentages[masterTokenId] = platformSecondSalePercentage;
 
-        emit CreatorWhitelisted(_tokenId, creator);
+        emit CreatorWhitelisted(masterTokenId, layerCount, creator);
     }
 
 
@@ -272,9 +287,53 @@ contract CortexArtUpgradeable is Initializable, CRC4FullUpgradeable {
         emit ArtistSecondSalePercentUpdated(artistSecondSalePercentage);
     }
 
+    function setupControlToken(uint256 controlTokenId, string controlTokenURI,
+        int256[] leverMinValues,
+        int256[] leverMaxValues,
+        int256 numAllowedUpdates,
+        address[] additionalCollaborators
+    ) external {
+        // Hard cap the number of levers a single control token can have
+        require (leverMinValues.length <= 500, "Too many control levers.");
+        // Hard cap the number of collaborators a single control token can have
+        require (additionalCollaborators.length <= 50, "Too many collaborators.");
+        // check that a control token exists for this token id
+        require(controlTokenMapping[controlTokenId].exists, "No control token found");
+        // ensure that this token is not setup yet
+        require(controlTokenMapping[controlTokenId].isSetup == false, "Already setup");
+        // ensure that only the control token artist is attempting this mint
+        require(uniqueTokenCreators[controlTokenId][0] == msg.sender, "Must be control token artist");
+        // enforce that the length of all the array lengths are equal
+        require(leverMinValues.length == leverMaxValues.length, "Values array mismatch");
+        // require the number of allowed updates to be infinite (-1) or some finite number
+        require((numAllowedUpdates == -1) || (numAllowedUpdates > 0), "Invalid allowed updates");
+        // mint the control token here
+        super._safeMint(msg.sender, controlTokenId);
+        // set token URI
+        super._setTokenURI(controlTokenId, controlTokenURI);        
+        // create the control token
+        controlTokenMapping[controlTokenId] = ControlToken(leverMinValues.length, numAllowedUpdates, true, true);
+        // create the control token levers now
+        for (uint256 k = 0; k < leverMinValues.length; k++) {
+            // enforce that maxValue is greater than or equal to minValue
+            require(leverMaxValues[k] >= leverMinValues[k], "Max val must >= min");
+            // add the lever to this token
+            controlTokenMapping[controlTokenId].levers[k] = ControlLever(leverMinValues[k],
+                leverMaxValues[k], leverMinValues[k], true);
+        }
+        // the control token artist can optionally specify additional collaborators on this layer
+        for (uint256 i = 0; i < additionalCollaborators.length; i++) {
+            // can't provide burn address as collaborator
+            require(additionalCollaborators[i] != address(0));
+
+            uniqueTokenCreators[controlTokenId].push(additionalCollaborators[i]);
+        }
+    }
+
 
     function mintArtwork(uint256 _tokenId, string _artworkTokenURI, int256 _numUpdates, address[] _controlTokenArtists)
-        external onlyWhitelistedCreator(_tokenId) {
+        external {
+        require(creatorWhitelist[_tokenId] == msg.sender, "not on the whitelist!");
         // Can't mint a token with ID 0 anymore
         require(_tokenId > 0);
         // Mint the token that represents ownership of the entire artwork    
@@ -290,8 +349,6 @@ contract CortexArtUpgradeable is Initializable, CRC4FullUpgradeable {
             // add this control token artist to the unique creator list for that control token
             uniqueTokenCreators[_tokenId].push(_controlTokenArtists[i]);
             ControlToken storage controlToken = controlTokenMapping[_tokenId];
-            // add the initially generated image
-            controlToken.imageHistroies.push(_artworkTokenURI);
             controlToken.numRemainingUpdates = _numUpdates;
             // stub in an existing control token so exists is true
             controlToken.exists = true;
@@ -322,10 +379,10 @@ contract CortexArtUpgradeable is Initializable, CRC4FullUpgradeable {
     // Allow the owner to sell a piece through auction
     function openAuction(uint256 _tokenId, uint256 _startTime, uint256 _endTime, uint256 _reservePrice) external {
         require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
-        require(pendingBids[_tokenId].exists == false, "Sold!");
+        require(pendingBids[_tokenId].exists == false, "Selling!");
         require((_startTime >= now) && (_startTime - now <= maximumAuctionPreparingTime), "Invlid starting time period!");
         require((_endTime > _startTime) && (_endTime - _startTime <= maximumAuctionPeriod), "Invalid ending time period!");
-        require((sellingState[_tokenId].auctionEndTime < now) && (sellingState[_tokenId].auctionStartTime < now), "There is an existing auction");
+        require(sellingState[_tokenId].auctionEndTime < now, "There is an existing auction");
         sellingState[_tokenId].auctionStartTime = _startTime;
         sellingState[_tokenId].auctionEndTime = _endTime;
         sellingState[_tokenId].reservePrice = _reservePrice;
@@ -345,12 +402,12 @@ contract CortexArtUpgradeable is Initializable, CRC4FullUpgradeable {
 
     // Bidder functions
     function bid(uint256 tokenId) external payable {
-        // don't allow bids of 0
+        // cannot equal, don't allow bids of 0
         require(msg.value > sellingState[tokenId].reservePrice);
         // Check for auction expiring time
-        require(sellingState[tokenId].auctionStartTime >= now, "Auction hasn't started!");
+        require(sellingState[tokenId].auctionStartTime <= now, "Auction hasn't started!");
         // Check for auction expiring time
-        require(sellingState[tokenId].auctionEndTime <= now, "Auction expired!");
+        require(sellingState[tokenId].auctionEndTime >= now, "Auction expired!");
         // don't let owners/approved bid on their own tokens
         require(_isApprovedOrOwner(msg.sender, tokenId) == false);
         // check if there's a high bid
@@ -449,6 +506,8 @@ contract CortexArtUpgradeable is Initializable, CRC4FullUpgradeable {
         }
         // clear highest bid
         pendingBids[tokenId] = PendingBid(address(0), 0, false);
+        // clear selling state
+        sellingState[tokenId] = SellingState(0, 0, 0, 0);
         // Transfer token to msg.sender
         _transferFrom(ownerOf(tokenId), to, tokenId);
         // Emit event
@@ -497,7 +556,7 @@ contract CortexArtUpgradeable is Initializable, CRC4FullUpgradeable {
 
     // Allows owner (or permissioned user) of a control token to update its lever values
     // Optionally accept a payment to increase speed of rendering priority
-    function useControlToken(uint256 controlTokenId, string _newTokenURI) external payable {
+    function useControlToken(uint256 controlTokenId, uint256[] leverIds, int256[] newValues) external payable {
         // check if sender is owner/approved of token OR if they're a permissioned controller for the token owner      
         require(_isApprovedOrOwner(msg.sender, controlTokenId) || (permissionedControllers[ownerOf(controlTokenId)][controlTokenId] == msg.sender),
             "Owner or permissioned only");
@@ -506,8 +565,27 @@ contract CortexArtUpgradeable is Initializable, CRC4FullUpgradeable {
         // get the control token reference
         ControlToken storage controlToken = controlTokenMapping[controlTokenId];
         // check that number of uses for control token is either infinite or is positive
-        require((controlToken.numRemainingUpdates == -1) || (controlToken.numRemainingUpdates > 0), "No more updates allowed");   
-        controlToken.imageHistroies.push(_newTokenURI);
+        require((controlToken.numRemainingUpdates == -1) || (controlToken.numRemainingUpdates > 0), "No more updates allowed");        
+        // collect the previous lever values for the event emit below
+        int256[] memory previousValues = new int256[](newValues.length);
+
+        for (uint256 i = 0; i < leverIds.length; i++) {
+            // get the control lever
+            ControlLever storage lever = controlTokenMapping[controlTokenId].levers[leverIds[i]];
+
+            // Enforce that the new value is valid        
+            require((newValues[i] >= lever.minValue) && (newValues[i] <= lever.maxValue), "Invalid val");
+
+            // Enforce that the new value is different
+            require(newValues[i] != lever.currentValue, "Must provide different val");
+
+            // grab previous value for the event emit
+            previousValues[i] = lever.currentValue;
+
+            // Update token current value
+            lever.currentValue = newValues[i];    
+        }
+
         // if there's a payment then send it to the platform (for higher priority updates)
         if (msg.value > 0) {
             safeFundsTransfer(platformAddress, msg.value);
@@ -525,7 +603,7 @@ contract CortexArtUpgradeable is Initializable, CRC4FullUpgradeable {
         }
 
         // emit event
-        emit ControlImageUpdated(controlTokenId, msg.value, controlToken.numRemainingUpdates, _newTokenURI);
+        emit ControlLeverUpdated(controlTokenId, msg.value, controlToken.numRemainingUpdates, leverIds, previousValues, newValues);
     }
 
 
