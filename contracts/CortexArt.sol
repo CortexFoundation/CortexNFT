@@ -276,6 +276,15 @@ contract CortexArt is CRC4Full {
         tokenURILocked[tokenId] = true;
     }
 
+    // replacing lockTokenURI
+    function lockToken(uint256 _tokenId) external onlyPlatform {
+        // only locked token can be sold
+        // unlocked token can still be modified:
+        // - min/max lever value
+        // - number of updates
+        // - token URI/ ipfs hash
+    }
+
 
     // Allows platform to change the percentage that artists receive on secondary sales
     function updateArtistSecondSalePercentage(uint256 _artistSecondSalePercentage) external onlyPlatform {
