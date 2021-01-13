@@ -338,44 +338,34 @@ contract CortexArt is CRC4Full {
     }
 
 
-    function mintArtwork(uint256 _tokenId, string _artworkTokenURI, int256 _numUpdates, address[] _controlTokenArtists)
-        external {
-        require(creatorWhitelist[_tokenId] == msg.sender, "not on the whitelist!");
+    function mintArtwork
+    (
+        uint256 masterTokenId, 
+        string artworkTokenURI, 
+        uint256 layerCount
+    )
+        external 
+    {
+        require(creatorWhitelist[masterTokenId] == msg.sender, "not on the whitelist!");
         // Can't mint a token with ID 0 anymore
-        require(_tokenId > 0);
+        require(masterTokenId > 0);
         // Mint the token that represents ownership of the entire artwork    
-        super._safeMint(msg.sender, _tokenId);
+        super._safeMint(msg.sender, masterTokenId);
         // set the token URI for this art
-        super._setTokenURI(_tokenId, _artworkTokenURI);
+        super._setTokenURI(masterTokenId, artworkTokenURI);
         // track the msg.sender address as the artist address for future royalties
-        uniqueTokenCreators[_tokenId].push(msg.sender);
+        uniqueTokenCreators[masterTokenId].push(msg.sender);
         // iterate through all control token URIs (1 for each control token)
-        for (uint256 i = 0; i < _controlTokenArtists.length; i++) {
-            // can't provide burn address as artist
-            require(_controlTokenArtists[i] != address(0));
-            // add this control token artist to the unique creator list for that control token
-            uniqueTokenCreators[_tokenId].push(_controlTokenArtists[i]);
+        for (uint256 i = 0; i < layerCount; i++) {
+            // determine the tokenID for this control token
+            uint256 controlTokenId = masterTokenId + i + 1;
             // stub in an existing control token so exists is true
-            controlTokenMapping[_tokenId] = ControlToken(0, 0, true, false);
+            controlTokenMapping[controlTokenId] = ControlToken(0, 0, true, false);
 
             // Layer control tokens use the same royalty percentage as the master token
-            platformFirstSalePercentages[_tokenId] = platformFirstSalePercentages[_tokenId];
+            platformFirstSalePercentages[controlTokenId] = platformFirstSalePercentages[masterTokenId];
 
-            platformSecondSalePercentages[_tokenId] = platformSecondSalePercentages[_tokenId];
-
-            if (_controlTokenArtists[i] != msg.sender) {
-                bool containsControlTokenArtist = false;
-
-                for (uint256 k = 0; k < uniqueTokenCreators[_tokenId].length; k++) {
-                    if (uniqueTokenCreators[_tokenId][k] == _controlTokenArtists[i]) {
-                        containsControlTokenArtist = true;
-                        break;
-                    }
-                }
-                if (containsControlTokenArtist == false) {
-                    uniqueTokenCreators[_tokenId].push(_controlTokenArtists[i]);
-                }
-            }
+            platformSecondSalePercentages[controlTokenId] = platformSecondSalePercentages[masterTokenId];
         }
     }
 
@@ -383,9 +373,9 @@ contract CortexArt is CRC4Full {
     // Allow the owner to sell a piece through auction
     function openAuction(uint256 _tokenId, uint256 _startTime, uint256 _endTime, uint256 _reservePrice) external {
         require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
-        require(pendingBids[_tokenId].exists == false, "Selling!");
-        require((_startTime >= now) && (_startTime - now <= maximumAuctionPreparingTime), "Invlid starting time period!");
-        require((_endTime > _startTime) && (_endTime - _startTime <= maximumAuctionPeriod), "Invalid ending time period!");
+        require(pendingBids[_tokenId].exists == false, "On sale!");
+        require((_startTime >= now) && (_startTime - now <= maximumAuctionPreparingTime), "Invlid starting time!");
+        require((_endTime > _startTime) && (_endTime - _startTime <= maximumAuctionPeriod), "Invalid ending time!");
         require(sellingState[_tokenId].auctionEndTime < now, "There is an existing auction");
         sellingState[_tokenId].auctionStartTime = _startTime;
         sellingState[_tokenId].auctionEndTime = _endTime;
