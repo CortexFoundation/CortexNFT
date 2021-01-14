@@ -283,6 +283,12 @@ contract CortexArt is CRC4Full {
         // - min/max lever value
         // - number of updates
         // - token URI/ ipfs hash
+
+        // ensure that this token exists
+        require(_exists(tokenId));
+        // lock this token from being changed
+        // TODO: change to tokenLocked
+        tokenURILocked[tokenId] = true;
     }
 
 
@@ -294,12 +300,18 @@ contract CortexArt is CRC4Full {
         emit ArtistSecondSalePercentUpdated(artistSecondSalePercentage);
     }
 
-    function setupControlToken(uint256 controlTokenId, string controlTokenURI,
+
+    function setupControlToken
+    (
+        uint256 controlTokenId, 
+        string controlTokenURI,
         int256[] leverMinValues,
         int256[] leverMaxValues,
         int256 numAllowedUpdates,
         address[] additionalCollaborators
-    ) external {
+    ) 
+        external 
+    {
         // Hard cap the number of levers a single control token can have
         require (leverMinValues.length <= 500, "Too many control levers.");
         // Hard cap the number of collaborators a single control token can have
