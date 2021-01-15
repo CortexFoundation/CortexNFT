@@ -9,6 +9,7 @@
     "@openzeppelin/contracts": "^3.2.0"
   },
   "dependencies": {
+    "@openzeppelin/upgrades": "^2.8.0",
     "@truffle/hdwallet-provider": "^1.2.0"
   }
 }

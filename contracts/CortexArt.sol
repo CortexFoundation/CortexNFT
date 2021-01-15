@@ -174,20 +174,17 @@ contract CortexArt is CRC4Full {
         string memory _name, 
         string memory _symbol, 
         uint256 _initialExpectedTokenSupply
-    ) CRC4Full(_name, _symbol) public {
-
+    ) 
+        CRC4Full(_name, _symbol) public 
+    {
         // starting royalty amounts
         artistSecondSalePercentage = 10;
-
         // intitialize the minimum bid increase percent
         minBidIncreasePercent = 1;
-
         // by default, the platformAddress is the address that mints this contract
         platformAddress = msg.sender;
-
         // set the initial expected token supply       
         expectedTokenSupply = _initialExpectedTokenSupply;
-
         require(expectedTokenSupply > 0);
     }
 
@@ -252,44 +249,32 @@ contract CortexArt is CRC4Full {
     }
 
 
-    function updateMaximumAuctionPeriod(uint256 _newTime) external onlyPlatform {
-        maximumAuctionPeriod = _newTime;
+    function updateMaximumAuctionPeriod(uint256 _maxPeriod, uint256 _maxPrepTime) external onlyPlatform {
+        maximumAuctionPeriod = _maxPeriod;
+        maximumAuctionPreparingTime = _maxPrepTime;
     }
 
 
+    // --- deprecated ---
     // Allow the platform to update a token's URI if it's not locked yet (for fixing tokens post mint process)
-    function updateTokenURI(uint256 tokenId, string tokenURI) external onlyPlatform {
-        // ensure that this token exists 
-        require(_exists(tokenId));
-        // ensure that the URI for this token is not locked yet
-        require(tokenURILocked[tokenId] == false);
-        // update the token URI
-        super._setTokenURI(tokenId, tokenURI);
-    }
+    // function updateTokenURI(uint256 tokenId, string tokenURI) external onlyPlatform {
+    //     // ensure that this token exists 
+    //     require(_exists(tokenId));
+    //     // ensure that the URI for this token is not locked yet
+    //     require(tokenURILocked[tokenId] == false);
+    //     // update the token URI
+    //     super._setTokenURI(tokenId, tokenURI);
+    // }
 
 
+    // --- deprecated ---
     // Locks a token's URI from being updated
-    function lockTokenURI(uint256 tokenId) external onlyPlatform {
-        // ensure that this token exists
-        require(_exists(tokenId));
-        // lock this token's URI from being changed
-        tokenURILocked[tokenId] = true;
-    }
-
-    // replacing lockTokenURI
-    function lockToken(uint256 _tokenId) external onlyPlatform {
-        // only locked token can be sold
-        // unlocked token can still be modified:
-        // - min/max lever value
-        // - number of updates
-        // - token URI/ ipfs hash
-
-        // ensure that this token exists
-        require(_exists(tokenId));
-        // lock this token from being changed
-        // TODO: change to tokenLocked
-        tokenURILocked[tokenId] = true;
-    }
+    // function lockTokenURI(uint256 tokenId) external onlyPlatform {
+    //     // ensure that this token exists
+    //     require(_exists(tokenId));
+    //     // lock this token's URI from being changed
+    //     tokenURILocked[tokenId] = true;
+    // }
 
 
     // Allows platform to change the percentage that artists receive on secondary sales
