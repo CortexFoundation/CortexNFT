@@ -537,6 +537,31 @@ contract CortexArt is CRC4Full {
     }
 
 
+    // return the min, max, and current value of a control lever
+    function getControlToken(uint256 controlTokenId) external view returns(int256[] memory) {
+        require(controlTokenMapping[controlTokenId].exists, "Token does not exist.");
+
+        ControlToken storage controlToken = controlTokenMapping[controlTokenId];
+
+        int256[] memory returnValues = new int256[](controlToken.numControlLevers.mul(3));
+        uint256 returnValIndex = 0;
+
+        // iterate through all the control levers for this control token
+        for (uint256 i = 0; i < controlToken.numControlLevers; i++) {
+            returnValues[returnValIndex] = controlToken.levers[i].minValue;
+            returnValIndex = returnValIndex.add(1);
+
+            returnValues[returnValIndex] = controlToken.levers[i].maxValue;
+            returnValIndex = returnValIndex.add(1);
+
+            returnValues[returnValIndex] = controlToken.levers[i].currentValue;
+            returnValIndex = returnValIndex.add(1);
+        }
+
+        return returnValues;
+    }
+
+
     // anyone can grant permission to another address to control a specific token on their behalf. Set to Address(0) to reset.
     function grantControlPermission(uint256 tokenId, address permissioned) external {
         permissionedControllers[msg.sender][tokenId] = permissioned;
