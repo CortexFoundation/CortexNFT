@@ -646,13 +646,4 @@ contract CortexArt is CRC4Full {
             failedTransferCredits[recipient] = failedTransferCredits[recipient].add(amount);
         }
     }
-
-
-    // override the default transfer
-    function _transferFrom(address from, address to, uint256 tokenId) internal {
-        // clear a buy now price
-        sellingState[tokenId].buyPrice = 0;
-        // transfer the token
-        super._transferFrom(from, to, tokenId);
-    }
 }
