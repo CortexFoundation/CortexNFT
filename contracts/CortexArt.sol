@@ -133,6 +133,14 @@ contract CortexArt is CRC4Full {
         bool exists;
     }
 
+
+    struct WhitelistReservation {
+        // the address of the creator
+        address creator;
+        // the amount of layers they're expected to mint
+        uint256 layerCount;
+    }
+
     // The maxium time period an auction can open for
     uint256 public maximumAuctionPeriod = 7 days;
     // The maxium time before the auction go live
@@ -148,7 +156,7 @@ contract CortexArt is CRC4Full {
     // mapping of tokenId to percentage of sale that the platform gets on secondary sales
     mapping(uint256 => uint256) public platformSecondSalePercentages;
     // what tokenId creators are allowed to mint (and how many layers)
-    mapping(uint256 => address) public creatorWhitelist;
+    mapping(uint256 => WhitelistReservation) public creatorWhitelist;
     // for each token, holds an array of the creator collaborators. For layer tokens it will likely just be [artist], for master tokens it may hold multiples
     mapping(uint256 => address[]) public uniqueTokenCreators;    
     // map a control token ID to its selling state
@@ -204,7 +212,7 @@ contract CortexArt is CRC4Full {
         // Async pieces must have at least 1 layer
         require (layerCount > 0);
         // reserve the tokenID for this creator
-        creatorWhitelist[masterTokenId] == creator;
+        creatorWhitelist[masterTokenId] = WhitelistReservation(creator, layerCount);
         // increase the expected token supply
         expectedTokenSupply = masterTokenId.add(layerCount).add(1);
         // define the platform percentages for this token here
@@ -343,7 +351,8 @@ contract CortexArt is CRC4Full {
     )
         external 
     {
-        require(creatorWhitelist[masterTokenId] == msg.sender, "not on the whitelist!");
+        require(creatorWhitelist[masterTokenId].creator == msg.sender, "not on the whitelist!");
+        require(creatorWhitelist[masterTokenId].layerCount == layerCount, "mismatch layer count!");
         // Can't mint a token with ID 0 anymore
         require(masterTokenId > 0);
         // Mint the token that represents ownership of the entire artwork    
