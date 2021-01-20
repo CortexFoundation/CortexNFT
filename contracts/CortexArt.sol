@@ -204,48 +204,48 @@ contract CortexArt is CRC4Full {
     }
 
 
-    // reserve a tokenID and layer count for a creator. Define a platform royalty percentage per art piece (some pieces have higher or lower amount)
-    function whitelistTokenForCreator(address creator, uint256 masterTokenId, uint256 layerCount, 
-        uint256 platformFirstSalePercentage, uint256 platformSecondSalePercentage) external onlyPlatform {
+    // reserve a tokenID and layer count for a _creator. Define a platform royalty percentage per art piece (some pieces have higher or lower amount)
+    function whitelistTokenForCreator(address _creator, uint256 _masterTokenId, uint256 _layerCount, 
+        uint256 _platformFirstSalePercentage, uint256 _platformSecondSalePercentage) external onlyPlatform {
         // the tokenID we're reserving must be the current expected token supply
-        require(masterTokenId == expectedTokenSupply);
+        require(_masterTokenId == expectedTokenSupply);
         // Async pieces must have at least 1 layer
-        require (layerCount > 0);
-        // reserve the tokenID for this creator
-        creatorWhitelist[masterTokenId] = WhitelistReservation(creator, layerCount);
+        require (_layerCount > 0);
+        // reserve the tokenID for this _creator
+        creatorWhitelist[_masterTokenId] = WhitelistReservation(_creator, _layerCount);
         // increase the expected token supply
-        expectedTokenSupply = masterTokenId.add(layerCount).add(1);
+        expectedTokenSupply = _masterTokenId.add(_layerCount).add(1);
         // define the platform percentages for this token here
-        platformFirstSalePercentages[masterTokenId] = platformFirstSalePercentage;
-        platformSecondSalePercentages[masterTokenId] = platformSecondSalePercentage;
+        platformFirstSalePercentages[_masterTokenId] = _platformFirstSalePercentage;
+        platformSecondSalePercentages[_masterTokenId] = _platformSecondSalePercentage;
 
-        emit CreatorWhitelisted(masterTokenId, layerCount, creator);
+        emit CreatorWhitelisted(_masterTokenId, _layerCount, _creator);
     }
 
 
     // Allows the current platform address to update to something different
-    function updatePlatformAddress(address newPlatformAddress) external onlyPlatform {
-        platformAddress = newPlatformAddress;
+    function updatePlatformAddress(address _newPlatformAddress) external onlyPlatform {
+        platformAddress = _newPlatformAddress;
 
-        emit PlatformAddressUpdated(newPlatformAddress);
+        emit PlatformAddressUpdated(_newPlatformAddress);
     }
 
 
     // Allows platform to waive the first sale requirement for a token (for charity events, special cases, etc)
-    function waiveFirstSaleRequirement(uint256 tokenId) external onlyPlatform {
+    function waiveFirstSaleRequirement(uint256 _tokenId) external onlyPlatform {
         // This allows the token sale proceeds to go to the current owner (rather than be distributed amongst the token's creators)
-        tokenDidHaveFirstSale[tokenId] = true;
+        tokenDidHaveFirstSale[_tokenId] = true;
     }
 
 
     // Allows platform to change the royalty percentage for a specific token
-    function updatePlatformSalePercentage(uint256 tokenId, uint256 platformFirstSalePercentage, 
-        uint256 platformSecondSalePercentage) external onlyPlatform {
+    function updatePlatformSalePercentage(uint256 _tokenId, uint256 _platformFirstSalePercentage, 
+        uint256 _platformSecondSalePercentage) external onlyPlatform {
         // set the percentages for this token
-        platformFirstSalePercentages[tokenId] = platformFirstSalePercentage;
-        platformSecondSalePercentages[tokenId] = platformSecondSalePercentage;
+        platformFirstSalePercentages[_tokenId] = _platformFirstSalePercentage;
+        platformSecondSalePercentages[_tokenId] = _platformSecondSalePercentage;
         // emit an event to notify that the platform percent for this token has changed
-        emit PlatformSalePercentageUpdated(tokenId, platformFirstSalePercentage, platformSecondSalePercentage);
+        emit PlatformSalePercentageUpdated(_tokenId, _platformFirstSalePercentage, _platformSecondSalePercentage);
     }
 
 
@@ -296,97 +296,99 @@ contract CortexArt is CRC4Full {
 
     function setupControlToken
     (
-        uint256 controlTokenId, 
-        string controlTokenURI,
-        int256[] leverMinValues,
-        int256[] leverMaxValues,
-        int256 numAllowedUpdates,
-        address[] additionalCollaborators
+        uint256 _controlTokenId, 
+        string _controlTokenURI,
+        int256[] _leverMinValues,
+        int256[] _leverMaxValues,
+        int256 _numAllowedUpdates,
+        address[] _additionalCollaborators
     ) 
         external 
     {
         // Hard cap the number of levers a single control token can have
-        require (leverMinValues.length <= 500, "Too many control levers.");
+        require(_leverMinValues.length <= 500, "Too many control levers.");
         // Hard cap the number of collaborators a single control token can have
-        require (additionalCollaborators.length <= 50, "Too many collaborators.");
+        require(_additionalCollaborators.length <= 50, "Too many collaborators.");
         // check that a control token exists for this token id
-        require(controlTokenMapping[controlTokenId].exists, "No control token found");
+        require(controlTokenMapping[_controlTokenId].exists, "No control token found");
         // ensure that this token is not setup yet
-        require(controlTokenMapping[controlTokenId].isSetup == false, "Already setup");
+        require(controlTokenMapping[_controlTokenId].isSetup == false, "Already setup");
         // ensure that only the control token artist is attempting this mint
-        require(uniqueTokenCreators[controlTokenId][0] == msg.sender, "Must be control token artist");
+        require(uniqueTokenCreators[_controlTokenId][0] == msg.sender, "Must be control token artist");
         // enforce that the length of all the array lengths are equal
-        require(leverMinValues.length == leverMaxValues.length, "Values array mismatch");
+        require(_leverMinValues.length == _leverMaxValues.length, "Values array mismatch");
         // require the number of allowed updates to be infinite (-1) or some finite number
-        require((numAllowedUpdates == -1) || (numAllowedUpdates > 0), "Invalid allowed updates");
+        require((_numAllowedUpdates == -1) || (_numAllowedUpdates > 0), "Invalid allowed updates");
         // mint the control token here
-        super._safeMint(msg.sender, controlTokenId);
+        super._safeMint(msg.sender, _controlTokenId);
         // set token URI
-        super._setTokenURI(controlTokenId, controlTokenURI);        
+        super._setTokenURI(_controlTokenId, _controlTokenURI);        
         // create the control token
-        controlTokenMapping[controlTokenId] = ControlToken(leverMinValues.length, numAllowedUpdates, true, true);
+        controlTokenMapping[_controlTokenId] = ControlToken(_leverMinValues.length, _numAllowedUpdates, true, true);
         // create the control token levers now
-        for (uint256 k = 0; k < leverMinValues.length; k++) {
+        for (uint256 k = 0; k < _leverMinValues.length; k++) {
             // enforce that maxValue is greater than or equal to minValue
-            require(leverMaxValues[k] >= leverMinValues[k], "Max val must >= min");
+            require(_leverMaxValues[k] >= _leverMinValues[k], "Max val must >= min");
             // add the lever to this token
-            controlTokenMapping[controlTokenId].levers[k] = ControlLever(leverMinValues[k],
-                leverMaxValues[k], leverMinValues[k], true);
+            controlTokenMapping[_controlTokenId].levers[k] = ControlLever(_leverMinValues[k],
+                _leverMaxValues[k], _leverMinValues[k], true);
         }
         // the control token artist can optionally specify additional collaborators on this layer
-        for (uint256 i = 0; i < additionalCollaborators.length; i++) {
+        for (uint256 i = 0; i < _additionalCollaborators.length; i++) {
             // can't provide burn address as collaborator
-            require(additionalCollaborators[i] != address(0));
+            require(_additionalCollaborators[i] != address(0));
 
-            uniqueTokenCreators[controlTokenId].push(additionalCollaborators[i]);
+            uniqueTokenCreators[_controlTokenId].push(_additionalCollaborators[i]);
         }
     }
 
 
     function mintArtwork
     (
-        uint256 masterTokenId, 
-        string artworkTokenURI, 
-        uint256 layerCount
+        uint256 _masterTokenId, 
+        string _artworkTokenURI, 
+        address[] _controlTokenArtists
     )
         external 
     {
-        require(creatorWhitelist[masterTokenId].creator == msg.sender, "not on the whitelist!");
-        require(creatorWhitelist[masterTokenId].layerCount == layerCount, "mismatch layer count!");
+        require(creatorWhitelist[_masterTokenId].creator == msg.sender, "not on the whitelist!");
+        require(creatorWhitelist[_masterTokenId].layerCount == _controlTokenArtists.length, "mismatch layer count!");
         // Can't mint a token with ID 0 anymore
-        require(masterTokenId > 0);
+        require(_masterTokenId > 0);
         // Mint the token that represents ownership of the entire artwork    
-        super._safeMint(msg.sender, masterTokenId);
+        super._safeMint(msg.sender, _masterTokenId);
         // set the token URI for this art
-        super._setTokenURI(masterTokenId, artworkTokenURI);
+        super._setTokenURI(_masterTokenId, _artworkTokenURI);
         // track the msg.sender address as the artist address for future royalties
-        uniqueTokenCreators[masterTokenId].push(msg.sender);
+        uniqueTokenCreators[_masterTokenId].push(msg.sender);
         // iterate through all control token URIs (1 for each control token)
-        for (uint256 i = 0; i < layerCount; i++) {
+        for (uint256 i = 0; i < _controlTokenArtists.length; i++) {
             // determine the tokenID for this control token
-            uint256 controlTokenId = masterTokenId + i + 1;
+            uint256 controlTokenId = _masterTokenId + i + 1;
+            // add this control token artist to the unique creator list for that control token
+            uniqueTokenCreators[controlTokenId].push(_controlTokenArtists[i]);
             // stub in an existing control token so exists is true
             controlTokenMapping[controlTokenId] = ControlToken(0, 0, true, false);
 
             // Layer control tokens use the same royalty percentage as the master token
-            platformFirstSalePercentages[controlTokenId] = platformFirstSalePercentages[masterTokenId];
+            platformFirstSalePercentages[controlTokenId] = platformFirstSalePercentages[_masterTokenId];
 
-            platformSecondSalePercentages[controlTokenId] = platformSecondSalePercentages[masterTokenId];
+            platformSecondSalePercentages[controlTokenId] = platformSecondSalePercentages[_masterTokenId];
         }
     }
 
 
     // Allow the owner to sell a piece through auction
-    function openAuction(uint256 _tokenId, uint256 _startTime, uint256 _endTime, uint256 _reservePrice) external {
+    function openAuction(uint256 _tokenId, uint256 _prepTime, uint256 _auctionTime, uint256 _reservePrice) external {
         require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
         require(pendingBids[_tokenId].exists == false, "On sale!");
-        require((_startTime >= now) && (_startTime - now <= maximumAuctionPreparingTime), "Invlid starting time!");
-        require((_endTime > _startTime) && (_endTime - _startTime <= maximumAuctionPeriod), "Invalid ending time!");
         require(sellingState[_tokenId].auctionEndTime < now, "There is an existing auction");
-        sellingState[_tokenId].auctionStartTime = _startTime;
-        sellingState[_tokenId].auctionEndTime = _endTime;
+        require(_prepTime <= maximumAuctionPreparingTime, "Exceed max preparing time");
+        require(_auctionTime <= maximumAuctionPeriod, "Exceed max auction time!");
+        sellingState[_tokenId].auctionStartTime = now + _prepTime;
+        sellingState[_tokenId].auctionEndTime = sellingState[_tokenId].auctionStartTime + _auctionTime;
         sellingState[_tokenId].reservePrice = _reservePrice;
-        emit AuctionCreated(_tokenId, _startTime, _endTime);
+        emit AuctionCreated(_tokenId, sellingState[_tokenId].auctionStartTime, sellingState[_tokenId].auctionEndTime);
     }
 
 
@@ -401,140 +403,141 @@ contract CortexArt is CRC4Full {
 
 
     // Bidder functions
-    function bid(uint256 tokenId) external payable {
+    function bid(uint256 _tokenId) external payable {
         // cannot equal, don't allow bids of 0
-        require(msg.value > sellingState[tokenId].reservePrice);
+        require(msg.value > sellingState[_tokenId].reservePrice);
         // Check for auction expiring time
-        require(sellingState[tokenId].auctionStartTime <= now, "Auction hasn't started!");
+        require(sellingState[_tokenId].auctionStartTime <= now, "Auction hasn't started!");
         // Check for auction expiring time
-        require(sellingState[tokenId].auctionEndTime >= now, "Auction expired!");
+        require(sellingState[_tokenId].auctionEndTime >= now, "Auction expired!");
         // don't let owners/approved bid on their own tokens
-        require(_isApprovedOrOwner(msg.sender, tokenId) == false);
+        require(_isApprovedOrOwner(msg.sender, _tokenId) == false);
         // check if there's a high bid
-        if (pendingBids[tokenId].exists) {
+        if (pendingBids[_tokenId].exists) {
             // enforce that this bid is higher by at least the minimum required percent increase
-            require(msg.value >= (pendingBids[tokenId].amount.mul(minBidIncreasePercent.add(100)).div(100)), "Bid must increase by min %");
+            require(msg.value >= (pendingBids[_tokenId].amount.mul(minBidIncreasePercent.add(100)).div(100)), "Bid must increase by min %");
             // Return bid amount back to bidder
-            safeFundsTransfer(pendingBids[tokenId].bidder, pendingBids[tokenId].amount);
+            safeFundsTransfer(pendingBids[_tokenId].bidder, pendingBids[_tokenId].amount);
         }
         // set the new highest bid
-        pendingBids[tokenId] = PendingBid(msg.sender, msg.value, true);
+        pendingBids[_tokenId] = PendingBid(msg.sender, msg.value, true);
         // Emit event for the bid proposal
-        emit BidProposed(tokenId, msg.value, msg.sender);
+        emit BidProposed(_tokenId, msg.value, msg.sender);
     }
 
 
     // allows an address with a pending bid to withdraw it
-    function withdrawBid(uint256 tokenId) external {
+    function withdrawBid(uint256 _tokenId) external {
         // check that there is a bid from the sender to withdraw (also allows platform address to withdraw a bid on someone's behalf)
         require(msg.sender == platformAddress);
         // attempt to withdraw the bid
-        _withdrawBid(tokenId);        
+        _withdrawBid(_tokenId);        
     }
 
 
-    function _withdrawBid(uint256 tokenId) internal {
-        require(pendingBids[tokenId].exists);
+    function _withdrawBid(uint256 _tokenId) internal {
+        require(pendingBids[_tokenId].exists);
         // Return bid amount back to bidder
-        safeFundsTransfer(pendingBids[tokenId].bidder, pendingBids[tokenId].amount);
+        safeFundsTransfer(pendingBids[_tokenId].bidder, pendingBids[_tokenId].amount);
         // clear highest bid
-        pendingBids[tokenId] = PendingBid(address(0), 0, false);
+        pendingBids[_tokenId] = PendingBid(address(0), 0, false);
         // emit an event when the highest bid is withdrawn
-        emit BidWithdrawn(tokenId);
+        emit BidWithdrawn(_tokenId);
     }
+
+
+    // Owner functions
+    // Allow owner to accept the highest bid for a token
+    function acceptBid(uint256 _tokenId) external {
+        // can only be accepted when auction ended
+        require(sellingState[_tokenId].auctionEndTime <= now);
+        // check if there's a bid to accept
+        require(pendingBids[_tokenId].exists);
+        // process the sale
+        onTokenSold(_tokenId, pendingBids[_tokenId].amount, pendingBids[_tokenId].bidder);
+    }
+
+
+    // Allows owner of a control token to set an immediate buy price. Set to 0 to reset.
+    function makeBuyPrice(uint256 _tokenId, uint256 _amount) external {
+        // check if sender is owner/approved of token        
+        require(_isApprovedOrOwner(msg.sender, _tokenId));
+        // set the buy price
+        sellingState[_tokenId].buyPrice = _amount;
+        // emit event
+        emit BuyPriceSet(_tokenId, _amount);
+    }
+
 
     // Buy the artwork for the currently set price
     // Allows the buyer to specify an expected remaining uses they'll accept
-    function takeBuyPrice(uint256 tokenId, int256 expectedRemainingUpdates) external payable {
+    function takeBuyPrice(uint256 _tokenId, int256 _expectedRemainingUpdates) external payable {
         // don't let owners/approved buy their own tokens
-        require(_isApprovedOrOwner(msg.sender, tokenId) == false);
+        require(_isApprovedOrOwner(msg.sender, _tokenId) == false);
         // get the sale amount
-        uint256 saleAmount = sellingState[tokenId].buyPrice;
+        uint256 saleAmount = sellingState[_tokenId].buyPrice;
         // check that there is a buy price
         require(saleAmount > 0);
         // check that the buyer sent exact amount to purchase
         require(msg.value == saleAmount);
         // if this is a control token
-        if (controlTokenMapping[tokenId].exists) {
+        if (controlTokenMapping[_tokenId].exists) {
             // ensure that the remaining uses on the token is equal to what buyer expects
-            require(controlTokenMapping[tokenId].numRemainingUpdates >= expectedRemainingUpdates);
+            require(controlTokenMapping[_tokenId].numRemainingUpdates >= _expectedRemainingUpdates);
         }
         // Return all highest bidder's money
-        if (pendingBids[tokenId].exists) {
+        if (pendingBids[_tokenId].exists) {
             // Return bid amount back to bidder
-            safeFundsTransfer(pendingBids[tokenId].bidder, pendingBids[tokenId].amount);
+            safeFundsTransfer(pendingBids[_tokenId].bidder, pendingBids[_tokenId].amount);
             // clear highest bid
-            pendingBids[tokenId] = PendingBid(address(0), 0, false);
+            pendingBids[_tokenId] = PendingBid(address(0), 0, false);
         }
-        onTokenSold(tokenId, saleAmount, msg.sender);
+        onTokenSold(_tokenId, saleAmount, msg.sender);
     }
 
 
     // Take an amount and distribute it evenly amongst a list of creator addresses
-    function distributeFundsToCreators(uint256 amount, address[] memory creators) private {
-        uint256 creatorShare = amount.div(creators.length);
+    function distributeFundsToCreators(uint256 _amount, address[] memory _creators) private {
+        uint256 creatorShare = _amount.div(_creators.length);
 
-        for (uint256 i = 0; i < creators.length; i++) {
-            safeFundsTransfer(creators[i], creatorShare);
+        for (uint256 i = 0; i < _creators.length; i++) {
+            safeFundsTransfer(_creators[i], creatorShare);
         }
     }
 
 
     // When a token is sold via list price or bid. Distributes the sale amount to the unique token creators and transfer
     // the token to the new owner
-    function onTokenSold(uint256 tokenId, uint256 saleAmount, address to) private {
+    function onTokenSold(uint256 _tokenId, uint256 saleAmount, address to) private {
         // if the first sale already happened, then give the artist + platform the secondary royalty percentage
-        if (tokenDidHaveFirstSale[tokenId]) {
+        if (tokenDidHaveFirstSale[_tokenId]) {
             // give platform its secondary sale percentage
-            uint256 platformAmount = saleAmount.mul(platformSecondSalePercentages[tokenId]).div(100);
+            uint256 platformAmount = saleAmount.mul(platformSecondSalePercentages[_tokenId]).div(100);
             safeFundsTransfer(platformAddress, platformAmount);
             // distribute the creator royalty amongst the creators (all artists involved for a base token, sole artist creator for layer )
             uint256 creatorAmount = saleAmount.mul(artistSecondSalePercentage).div(100);
-            distributeFundsToCreators(creatorAmount, uniqueTokenCreators[tokenId]);
+            distributeFundsToCreators(creatorAmount, uniqueTokenCreators[_tokenId]);
             // cast the owner to a payable address
-            address payableOwner = address(uint160(ownerOf(tokenId)));
+            address payableOwner = address(uint160(ownerOf(_tokenId)));
             // transfer the remaining amount to the owner of the token
             safeFundsTransfer(payableOwner, saleAmount.sub(platformAmount).sub(creatorAmount));
         } else {
-            tokenDidHaveFirstSale[tokenId] = true;
+            tokenDidHaveFirstSale[_tokenId] = true;
             // give platform its first sale percentage
-            platformAmount = saleAmount.mul(platformFirstSalePercentages[tokenId]).div(100);
+            platformAmount = saleAmount.mul(platformFirstSalePercentages[_tokenId]).div(100);
             safeFundsTransfer(platformAddress, platformAmount);
             // this is a token first sale, so distribute the remaining funds to the unique token creators of this token
             // (if it's a base token it will be all the unique creators, if it's a control token it will be that single artist)                      
-            distributeFundsToCreators(saleAmount.sub(platformAmount), uniqueTokenCreators[tokenId]);
+            distributeFundsToCreators(saleAmount.sub(platformAmount), uniqueTokenCreators[_tokenId]);
         }
         // clear highest bid
-        pendingBids[tokenId] = PendingBid(address(0), 0, false);
+        pendingBids[_tokenId] = PendingBid(address(0), 0, false);
         // clear selling state
-        sellingState[tokenId] = SellingState(0, 0, 0, 0);
+        sellingState[_tokenId] = SellingState(0, 0, 0, 0);
         // Transfer token to msg.sender
-        _transferFrom(ownerOf(tokenId), to, tokenId);
+        _transferFrom(ownerOf(_tokenId), to, _tokenId);
         // Emit event
-        emit TokenSale(tokenId, saleAmount, to);
-    }
-
-
-    // Owner functions
-    // Allow owner to accept the highest bid for a token
-    function acceptBid(uint256 tokenId) external {
-        // can only be accepted when auction ended
-        require(sellingState[tokenId].auctionEndTime <= now);
-        // check if there's a bid to accept
-        require(pendingBids[tokenId].exists);
-        // process the sale
-        onTokenSold(tokenId, pendingBids[tokenId].amount, pendingBids[tokenId].bidder);
-    }
-
-
-    // Allows owner of a control token to set an immediate buy price. Set to 0 to reset.
-    function makeBuyPrice(uint256 tokenId, uint256 amount) external {
-        // check if sender is owner/approved of token        
-        require(_isApprovedOrOwner(msg.sender, tokenId));
-        // set the buy price
-        sellingState[tokenId].buyPrice = amount;
-        // emit event
-        emit BuyPriceSet(tokenId, amount);
+        emit TokenSale(_tokenId, saleAmount, to);
     }
 
 
@@ -654,5 +657,14 @@ contract CortexArt is CRC4Full {
         if (success == false) {
             failedTransferCredits[recipient] = failedTransferCredits[recipient].add(amount);
         }
+    }
+
+    
+    // override transferFrom function
+    function transferFrom(address from, address to, uint256 tokenId) public {
+        require(pendingBids[tokenId].exists == false, "Pending bid!");
+        require(sellingState[tokenId].auctionEndTime == 0, "token on sale!");
+        sellingState[tokenId] = SellingState(0, 0, 0, 0);
+        super.transferFrom(from, to, tokenId);
     }
 }
