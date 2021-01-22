@@ -155,6 +155,8 @@ contract CortexArt is CRC4Full {
     mapping(uint256 => uint256) public platformFirstSalePercentages;
     // mapping of tokenId to percentage of sale that the platform gets on secondary sales
     mapping(uint256 => uint256) public platformSecondSalePercentages;
+    // users that are allowed to create artwork 
+    mapping(address => bool) public artistWhitelist;
     // what tokenId creators are allowed to mint (and how many layers)
     mapping(uint256 => WhitelistReservation) public creatorWhitelist;
     // for each token, holds an array of the creator collaborators. For layer tokens it will likely just be [artist], for master tokens it may hold multiples
@@ -204,9 +206,16 @@ contract CortexArt is CRC4Full {
     }
 
 
+    // whitelist an address as a artwork creator
+    function whitelistUser(address _userAddr) external onlyPlatform {
+        artistWhitelist[_userAddr] = true;
+    }
+
+
     // reserve a tokenID and layer count for a _creator. Define a platform royalty percentage per art piece (some pieces have higher or lower amount)
     function whitelistTokenForCreator(address _creator, uint256 _masterTokenId, uint256 _layerCount, 
         uint256 _platformFirstSalePercentage, uint256 _platformSecondSalePercentage) external onlyPlatform {
+        require(artistWhitelist[_creator] == true, "Creator not on the artist whitelist!");
         // the tokenID we're reserving must be the current expected token supply
         require(_masterTokenId == expectedTokenSupply);
         // Async pieces must have at least 1 layer
@@ -446,8 +455,7 @@ contract CortexArt is CRC4Full {
     }
 
 
-    // Owner functions
-    // Allow owner to accept the highest bid for a token
+    // Allow anyone to accept the highest bid for a token
     function acceptBid(uint256 _tokenId) external {
         // can only be accepted when auction ended
         require(sellingState[_tokenId].auctionEndTime <= now);
