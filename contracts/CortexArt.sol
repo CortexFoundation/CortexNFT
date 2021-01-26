@@ -580,6 +580,24 @@ contract CortexArt is CRC4Full {
 
         return returnValues;
     }
+    
+    
+    function getTokenOnSale() external view returns(uint256[] memory tokenIds) {
+        uint256 tokenCount = 0;
+        for(uint256 i = 1; i < expectedTokenSupply; ++i) {
+            if(sellingState[i].buyPrice > 0 || sellingState[i].auctionEndTime > 0) {
+                ++tokenCount;
+            }
+        }
+        tokenIds = new uint256[](tokenCount);
+        tokenCount = 0;
+        for(i = 1; i < expectedTokenSupply; ++i) {
+            if(sellingState[i].buyPrice > 0 || sellingState[i].auctionEndTime > 0) {
+                tokenIds[tokenCount] = i;
+                ++tokenCount;
+            }
+        }
+    }
 
 
     // anyone can grant permission to another address to control a specific token on their behalf. Set to Address(0) to reset.
