@@ -477,6 +477,23 @@ contract CortexArt is CRC4Full {
     }
 
 
+    function setSellingState(uint256 _tokenId, uint256 _buyPrice, uint256 _startTime, uint256 _endTime, uint256 _reservePrice) external {
+        require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
+        require(pendingBids[_tokenId].exists == false, "On sale!");
+        require(sellingState[_tokenId].auctionEndTime < now, "There is an existing auction");
+        require(now + maximumAuctionPreparingTime >= _startTime, "Exceed max preparing time");
+        require(_startTime + maximumAuctionPeriod >= _endTime, "Exceed max auction time!");
+        // set the buy price
+        sellingState[_tokenId].buyPrice = _buyPrice;
+        sellingState[_tokenId].auctionStartTime = now + _prepTime;
+        sellingState[_tokenId].auctionEndTime = sellingState[_tokenId].auctionStartTime + _auctionTime;
+        sellingState[_tokenId].reservePrice = _reservePrice;
+        // emit event
+        emit BuyPriceSet(_tokenId, _amount);
+        emit AuctionCreated(_tokenId, sellingState[_tokenId].auctionStartTime, sellingState[_tokenId].auctionEndTime);
+    }
+
+
     // Buy the artwork for the currently set price
     // Allows the buyer to specify an expected remaining uses they'll accept
     function takeBuyPrice(uint256 _tokenId, int256 _expectedRemainingUpdates) external payable {
