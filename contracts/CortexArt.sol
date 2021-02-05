@@ -467,13 +467,13 @@ contract CortexArt is CRC4Full {
 
 
     // Allows owner of a control token to set an immediate buy price. Set to 0 to reset.
-    function makeBuyPrice(uint256 _tokenId, uint256 _amount) external {
+    function makeBuyPrice(uint256 _tokenId, uint256 _buyPrice) external {
         // check if sender is owner/approved of token        
         require(_isApprovedOrOwner(msg.sender, _tokenId));
         // set the buy price
-        sellingState[_tokenId].buyPrice = _amount;
+        sellingState[_tokenId].buyPrice = _buyPrice;
         // emit event
-        emit BuyPriceSet(_tokenId, _amount);
+        emit BuyPriceSet(_tokenId, _buyPrice);
     }
 
 
@@ -485,11 +485,11 @@ contract CortexArt is CRC4Full {
         require(_startTime + maximumAuctionPeriod >= _endTime, "Exceed max auction time!");
         // set the buy price
         sellingState[_tokenId].buyPrice = _buyPrice;
-        sellingState[_tokenId].auctionStartTime = now + _prepTime;
-        sellingState[_tokenId].auctionEndTime = sellingState[_tokenId].auctionStartTime + _auctionTime;
+        sellingState[_tokenId].auctionStartTime = _startTime;
+        sellingState[_tokenId].auctionEndTime = _endTime;
         sellingState[_tokenId].reservePrice = _reservePrice;
         // emit event
-        emit BuyPriceSet(_tokenId, _amount);
+        emit BuyPriceSet(_tokenId, _buyPrice);
         emit AuctionCreated(_tokenId, sellingState[_tokenId].auctionStartTime, sellingState[_tokenId].auctionEndTime);
     }
 
