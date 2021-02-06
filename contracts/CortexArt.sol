@@ -480,7 +480,7 @@ contract CortexArt is CRC4Full {
     function setSellingState(uint256 _tokenId, uint256 _buyPrice, uint256 _startTime, uint256 _endTime, uint256 _reservePrice) external {
         require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
         require(pendingBids[_tokenId].exists == false, "On sale!");
-        require(sellingState[_tokenId].auctionEndTime < now, "There is an existing auction");
+        require(sellingState[_tokenId].auctionStartTime > now || sellingState[_tokenId].auctionEndTime < now, "There is an existing auction");
         require(now + maximumAuctionPreparingTime >= _startTime, "Exceed max preparing time");
         require(_startTime + maximumAuctionPeriod >= _endTime, "Exceed max auction time!");
         // set the buy price
@@ -602,14 +602,14 @@ contract CortexArt is CRC4Full {
     function getTokenOnSale() external view returns(uint256[] memory tokenIds) {
         uint256 tokenCount = 0;
         for(uint256 i = 1; i < expectedTokenSupply; ++i) {
-            if(sellingState[i].buyPrice > 0 || sellingState[i].auctionEndTime > 0) {
+            if(sellingState[i].buyPrice > 0 || sellingState[i].auctionEndTime > now) {
                 ++tokenCount;
             }
         }
         tokenIds = new uint256[](tokenCount);
         tokenCount = 0;
         for(i = 1; i < expectedTokenSupply; ++i) {
-            if(sellingState[i].buyPrice > 0 || sellingState[i].auctionEndTime > 0) {
+            if(sellingState[i].buyPrice > 0 || sellingState[i].auctionEndTime > now) {
                 tokenIds[tokenCount] = i;
                 ++tokenCount;
             }
