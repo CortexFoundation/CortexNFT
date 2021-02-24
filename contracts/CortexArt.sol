@@ -414,7 +414,7 @@ contract CortexArt is CRC4Full {
     // Bidder functions
     function bid(uint256 _tokenId) external payable {
         // cannot equal, don't allow bids of 0
-        require(msg.value > sellingState[_tokenId].reservePrice);
+        require(msg.value >= sellingState[_tokenId].reservePrice && msg.value > 0);
         // Check for auction expiring time
         require(sellingState[_tokenId].auctionStartTime <= now, "Auction hasn't started!");
         // Check for auction expiring time
