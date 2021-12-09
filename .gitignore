@@ -6,3 +6,6 @@ node_modules
 # OpenZeppelin
 .openzeppelin/.session
 .openzeppelin/dev-*.json
+*.DS_store
+cache/
+artifacts/

@@ -1,8 +1,8 @@
 pragma solidity ^0.4.24;
 
-import "./CRC4/CRC4Full.sol";
+import "./ERC721/ERC721Full.sol";
 
-contract CortexArt is CRC4Full {
+contract CortexArt is ERC721Full {
     // An event whenever the platform address is updated
     event PlatformAddressUpdated(
         address platformAddress
@@ -185,7 +185,7 @@ contract CortexArt is CRC4Full {
         string memory _symbol, 
         uint256 _initialExpectedTokenSupply
     ) 
-        CRC4Full(_name, _symbol) public 
+        ERC721Full(_name, _symbol) public 
     {
         // starting royalty amounts
         artistSecondSalePercentage = 10;
@@ -729,7 +729,6 @@ contract CortexArt is CRC4Full {
     function transferFrom(address from, address to, uint256 tokenId) public {
         require(pendingBids[tokenId].exists == false, "Pending bid!");
         require(sellingState[tokenId].auctionEndTime == 0, "token on sale!");
-        // prevent from unintended transfer
         sellingState[tokenId] = SellingState(0, 0, 0, 0);
         super.transferFrom(from, to, tokenId);
     }

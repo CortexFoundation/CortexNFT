@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@openzeppelin/upgrades": "^2.8.0",
-    "@truffle/hdwallet-provider": "^1.2.0"
+    "@truffle/hdwallet-provider": "^1.2.0",
+    "hardhat": "^2.6.1"
   }
 }

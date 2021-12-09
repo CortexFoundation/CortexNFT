@@ -1,10 +1,11 @@
 pragma solidity ^0.4.24;
 
+import "./CRC4/CRC4Burnable.sol";
 import "./CRC4/CRC4Full.sol";
 import "./utils/Counters.sol";
 import "./utils/Ownable.sol";
 
-contract Artwork is CRC4Full, Ownable {
+contract Artwork is CRC4Full, CRC4Burnable, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
@@ -34,6 +35,12 @@ contract Artwork is CRC4Full, Ownable {
             newItemId = _tokenIds.current();
             _mint(_owner, newItemId);
             _setTokenURI(newItemId, _tokenURI);
+        }
+    }
+
+    function burnBatch(uint256[] memory _ids) public {
+        for(uint i = 0; i <_ids.length; ++i) {
+            burn(_ids[i]);
         }
     }
 }
