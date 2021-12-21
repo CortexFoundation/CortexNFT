@@ -73,48 +73,6 @@ contract CortexArt is CRC4Full {
         address buyer
     );
 
-    // An event whenever a control token has been updated
-    event ControlLeverUpdated(
-        // the id of the token
-        uint256 tokenId,
-        // an optional amount that the updater sent to boost priority of the rendering
-        uint256 priorityTip,
-        // the number of times this control lever can now be updated
-        int256 numRemainingUpdates,
-        // the ids of the levers that were updated
-        uint256[] leverIds,        
-        // the previous values that the levers had before this update (for clients who want to animate the change)
-        int256[] previousValues,
-        // the new updated value
-        int256[] updatedValues
-    );
-
-    // struct for a token that controls part of the artwork
-    struct ControlToken {
-        // number that tracks how many levers there are
-        uint256 numControlLevers;
-        // The number of update calls this token has (-1 for infinite)
-        int256 numRemainingUpdates;
-        // false by default, true once instantiated
-        bool exists;
-        // false by default, true once setup by the artist
-        bool isSetup;
-        // the levers that this control token can use
-        mapping(uint256 => ControlLever) levers;
-    }
-
-    // struct for a lever on a control token that can be changed
-    struct ControlLever {
-        // // The minimum value this token can have (inclusive)
-        int256 minValue;
-        // The maximum value this token can have (inclusive)
-        int256 maxValue;
-        // The current value for this token
-        int256 currentValue;
-        // false by default, true once instantiated
-        bool exists;
-    }
-
     // strcut for the selling state of the artwork
     struct SellingState {
         uint256 buyPrice;
@@ -145,10 +103,11 @@ contract CortexArt is CRC4Full {
     uint256 public maximumAuctionPeriod = 7 days;
     // The maxium time before the auction go live
     uint256 public maximumAuctionPreparingTime = 3 days;
+    uint256 public maximumPiecePerMint = 30;
     // track whether this token was sold the first time or not (used for determining whether to use first or secondary sale percentage)
     mapping(uint256 => bool) public tokenDidHaveFirstSale;
     // if a token's URI has been locked or not
-    mapping(uint256 => bool) public tokenURILocked;  
+    // mapping(uint256 => bool) public tokenURILocked;  
     // mapping of addresses to credits for failed transfers
     mapping(address => uint256) public failedTransferCredits;
     // mapping of tokenId to percentage of sale that the platform gets on first sales
@@ -164,9 +123,7 @@ contract CortexArt is CRC4Full {
     // map a control token ID to its selling state
     mapping(uint256 => SellingState) public sellingState;
     // map a control token ID to its highest bid
-    mapping(uint256 => PendingBid) public pendingBids;
-    // map a control token id to a control token struct
-    mapping(uint256 => ControlToken) public controlTokenMapping;    
+    mapping(uint256 => PendingBid) public pendingBids;  
     // mapping of addresses that are allowed to control tokens on your behalf
     mapping(address => mapping(uint256 => address)) public permissionedControllers;
     // the percentage of sale that an artist gets on secondary sales
@@ -247,6 +204,13 @@ contract CortexArt is CRC4Full {
     }
 
 
+    function setMaximumPiecePerMint(uint256 _maximumPiecePerMint) external onlyPlatform {
+        require(_maximumPiecePerMint > 0);
+        maximumPiecePerMint = _maximumPiecePerMint;
+    }
+
+
+
     // Allows platform to change the royalty percentage for a specific token
     function updatePlatformSalePercentage(uint256 _tokenId, uint256 _platformFirstSalePercentage, 
         uint256 _platformSecondSalePercentage) external onlyPlatform {
@@ -302,107 +266,29 @@ contract CortexArt is CRC4Full {
         emit ArtistSecondSalePercentUpdated(artistSecondSalePercentage);
     }
 
+    // used for creating single artwork
+    function mintArtwork (string _artworkTokenURI) external {
+        require(artistWhitelist[msg.sender] == true, "not on the whitelist!");
+        _mintArtwork(_artworkTokenURI);
+    }
 
-    function setupControlToken
-    (
-        uint256 _controlTokenId, 
-        string _controlTokenURI,
-        int256[] _leverMinValues,
-        int256[] _leverMaxValues,
-        int256 _numAllowedUpdates,
-        address[] _additionalCollaborators
-    ) 
-        external 
-    {
-        // Hard cap the number of levers a single control token can have
-        require(_leverMinValues.length <= 500, "Too many control levers.");
-        // Hard cap the number of collaborators a single control token can have
-        require(_additionalCollaborators.length <= 50, "Too many collaborators.");
-        // check that a control token exists for this token id
-        require(controlTokenMapping[_controlTokenId].exists, "No control token found");
-        // ensure that this token is not setup yet
-        require(controlTokenMapping[_controlTokenId].isSetup == false, "Already setup");
-        // ensure that only the control token artist is attempting this mint
-        require(uniqueTokenCreators[_controlTokenId][0] == msg.sender, "Must be control token artist");
-        // enforce that the length of all the array lengths are equal
-        require(_leverMinValues.length == _leverMaxValues.length, "Values array mismatch");
-        // require the number of allowed updates to be infinite (-1) or some finite number
-        require((_numAllowedUpdates == -1) || (_numAllowedUpdates > 0), "Invalid allowed updates");
-        // mint the control token here
-        super._safeMint(msg.sender, _controlTokenId);
-        // set token URI
-        super._setTokenURI(_controlTokenId, _controlTokenURI);        
-        // create the control token
-        controlTokenMapping[_controlTokenId] = ControlToken(_leverMinValues.length, _numAllowedUpdates, true, true);
-        // create the control token levers now
-        for (uint256 k = 0; k < _leverMinValues.length; k++) {
-            // enforce that maxValue is greater than or equal to minValue
-            require(_leverMaxValues[k] >= _leverMinValues[k], "Max val must >= min");
-            // add the lever to this token
-            controlTokenMapping[_controlTokenId].levers[k] = ControlLever(_leverMinValues[k],
-                _leverMaxValues[k], _leverMinValues[k], true);
-        }
-        // the control token artist can optionally specify additional collaborators on this layer
-        for (uint256 i = 0; i < _additionalCollaborators.length; i++) {
-            // can't provide burn address as collaborator
-            require(_additionalCollaborators[i] != address(0));
-
-            uniqueTokenCreators[_controlTokenId].push(_additionalCollaborators[i]);
+    // used for creating more than one artworks
+    function mintArtwork (string[] memory _artworkTokenURI) external {
+        require(artistWhitelist[msg.sender] == true, "not on the whitelist!");
+        require(_artworkTokenURI.length <= maximumPiecePerMint, "exceeded maximum amount");
+        for(uint i; i < _artworkTokenURI.length; ++i) {
+            _mintArtwork(_artworkTokenURI[i]);
         }
     }
 
-
-    function mintArtwork
-    (
-        uint256 _masterTokenId, 
-        string _artworkTokenURI, 
-        address[] _controlTokenArtists
-    )
-        external 
-    {
-        require(creatorWhitelist[_masterTokenId].creator == msg.sender, "not on the whitelist!");
-        require(creatorWhitelist[_masterTokenId].layerCount == _controlTokenArtists.length, "mismatch layer count!");
-        // Can't mint a token with ID 0 anymore
-        require(_masterTokenId > 0);
+    function _mintArtwork (string _artworkTokenURI) internal {
         // Mint the token that represents ownership of the entire artwork    
-        super._safeMint(msg.sender, _masterTokenId);
+        super._safeMint(msg.sender, expectedTokenSupply);
         // set the token URI for this art
-        super._setTokenURI(_masterTokenId, _artworkTokenURI);
+        super._setTokenURI(expectedTokenSupply, _artworkTokenURI);
         // track the msg.sender address as the artist address for future royalties
-        uniqueTokenCreators[_masterTokenId].push(msg.sender);
-        // iterate through all control token URIs (1 for each control token)
-        for (uint256 i = 0; i < _controlTokenArtists.length; i++) {
-            // determine the tokenID for this control token
-            uint256 controlTokenId = _masterTokenId + i + 1;
-            // add this control token artist to the unique creator list for that control token
-            uniqueTokenCreators[controlTokenId].push(_controlTokenArtists[i]);
-            // stub in an existing control token so exists is true
-            controlTokenMapping[controlTokenId] = ControlToken(0, 0, true, false);
-
-            // Layer control tokens use the same royalty percentage as the master token
-            platformFirstSalePercentages[controlTokenId] = platformFirstSalePercentages[_masterTokenId];
-
-            platformSecondSalePercentages[controlTokenId] = platformSecondSalePercentages[_masterTokenId];
-        }
-    }
-
-    // used for creating single layer static artwork
-    function mintArtwork
-    (
-        uint256 _masterTokenId, 
-        string _artworkTokenURI
-    )
-        external
-    {
-        require(creatorWhitelist[_masterTokenId].creator == msg.sender, "not on the whitelist!");
-        // Can't mint a token with ID 0 anymore
-        require(_masterTokenId > 0);
-        // Mint the token that represents ownership of the entire artwork    
-        super._safeMint(msg.sender, _masterTokenId);
-        // set the token URI for this art
-        super._setTokenURI(_masterTokenId, _artworkTokenURI);
-        // track the msg.sender address as the artist address for future royalties
-        uniqueTokenCreators[_masterTokenId].push(msg.sender);
+        uniqueTokenCreators[expectedTokenSupply].push(msg.sender);
+        expectedTokenSupply = expectedTokenSupply.add(1);
     }
 
 
@@ -515,7 +401,7 @@ contract CortexArt is CRC4Full {
 
     // Buy the artwork for the currently set price
     // Allows the buyer to specify an expected remaining uses they'll accept
-    function takeBuyPrice(uint256 _tokenId, int256 _expectedRemainingUpdates) external payable {
+    function takeBuyPrice(uint256 _tokenId) external payable {
         // don't let owners/approved buy their own tokens
         require(_isApprovedOrOwner(msg.sender, _tokenId) == false);
         // get the sale amount
@@ -524,11 +410,6 @@ contract CortexArt is CRC4Full {
         require(saleAmount > 0);
         // check that the buyer sent exact amount to purchase
         require(msg.value == saleAmount);
-        // if this is a control token
-        if (controlTokenMapping[_tokenId].exists) {
-            // ensure that the remaining uses on the token is equal to what buyer expects
-            require(controlTokenMapping[_tokenId].numRemainingUpdates >= _expectedRemainingUpdates);
-        }
         // Return all highest bidder's money
         if (pendingBids[_tokenId].exists) {
             // Return bid amount back to bidder
@@ -586,40 +467,6 @@ contract CortexArt is CRC4Full {
         // Emit event
         emit TokenSale(_tokenId, saleAmount, to);
     }
-
-
-    // return the number of times that a control token can be used
-    function getNumRemainingControlUpdates(uint256 controlTokenId) external view returns (int256) {
-        require(controlTokenMapping[controlTokenId].exists, "Token does not exist.");
-
-        return controlTokenMapping[controlTokenId].numRemainingUpdates;
-    }
-
-
-    // return the min, max, and current value of a control lever
-    function getControlToken(uint256 controlTokenId) external view returns(int256[] memory) {
-        require(controlTokenMapping[controlTokenId].exists, "Token does not exist.");
-
-        ControlToken storage controlToken = controlTokenMapping[controlTokenId];
-
-        int256[] memory returnValues = new int256[](controlToken.numControlLevers.mul(3));
-        uint256 returnValIndex = 0;
-
-        // iterate through all the control levers for this control token
-        for (uint256 i = 0; i < controlToken.numControlLevers; i++) {
-            returnValues[returnValIndex] = controlToken.levers[i].minValue;
-            returnValIndex = returnValIndex.add(1);
-
-            returnValues[returnValIndex] = controlToken.levers[i].maxValue;
-            returnValIndex = returnValIndex.add(1);
-
-            returnValues[returnValIndex] = controlToken.levers[i].currentValue;
-            returnValIndex = returnValIndex.add(1);
-        }
-
-        return returnValues;
-    }
-    
     
     function getTokenOnSale() external view returns(uint256[] memory tokenIds) {
         uint256 tokenCount = 0;
@@ -644,59 +491,6 @@ contract CortexArt is CRC4Full {
         permissionedControllers[msg.sender][tokenId] = permissioned;
 
         emit PermissionUpdated(tokenId, msg.sender, permissioned);
-    }
-
-
-    // Allows owner (or permissioned user) of a control token to update its lever values
-    // Optionally accept a payment to increase speed of rendering priority
-    function useControlToken(uint256 controlTokenId, uint256[] leverIds, int256[] newValues) external payable {
-        // check if sender is owner/approved of token OR if they're a permissioned controller for the token owner      
-        require(_isApprovedOrOwner(msg.sender, controlTokenId) || (permissionedControllers[ownerOf(controlTokenId)][controlTokenId] == msg.sender),
-            "Owner or permissioned only");
-        // check if control exists
-        require(controlTokenMapping[controlTokenId].exists, "Token does not exist.");
-        // get the control token reference
-        ControlToken storage controlToken = controlTokenMapping[controlTokenId];
-        // check that number of uses for control token is either infinite or is positive
-        require((controlToken.numRemainingUpdates == -1) || (controlToken.numRemainingUpdates > 0), "No more updates allowed");        
-        // collect the previous lever values for the event emit below
-        int256[] memory previousValues = new int256[](newValues.length);
-
-        for (uint256 i = 0; i < leverIds.length; i++) {
-            // get the control lever
-            ControlLever storage lever = controlTokenMapping[controlTokenId].levers[leverIds[i]];
-
-            // Enforce that the new value is valid        
-            require((newValues[i] >= lever.minValue) && (newValues[i] <= lever.maxValue), "Invalid val");
-
-            // Enforce that the new value is different
-            require(newValues[i] != lever.currentValue, "Must provide different val");
-
-            // grab previous value for the event emit
-            previousValues[i] = lever.currentValue;
-
-            // Update token current value
-            lever.currentValue = newValues[i];    
-        }
-
-        // if there's a payment then send it to the platform (for higher priority updates)
-        if (msg.value > 0) {
-            safeFundsTransfer(platformAddress, msg.value);
-        }
-
-        // if this control token is finite in its uses
-        if (controlToken.numRemainingUpdates > 0) {
-            // decrease it down by 1
-            controlToken.numRemainingUpdates = controlToken.numRemainingUpdates - 1;
-
-            // since we used one of those updates, withdraw any existing bid for this token if exists
-            if (pendingBids[controlTokenId].exists) {
-                _withdrawBid(controlTokenId);
-            }
-        }
-
-        // emit event
-        emit ControlLeverUpdated(controlTokenId, msg.value, controlToken.numRemainingUpdates, leverIds, previousValues, newValues);
     }
 
 
