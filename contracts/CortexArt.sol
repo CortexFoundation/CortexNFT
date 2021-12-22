@@ -1,4 +1,5 @@
 pragma solidity ^0.4.24;
+pragma experimental ABIEncoderV2;
 
 import "./CRC4/CRC4Full.sol";
 
@@ -267,13 +268,13 @@ contract CortexArt is CRC4Full {
     }
 
     // used for creating single artwork
-    function mintArtwork (string _artworkTokenURI) external {
+    function mintArtwork(string _artworkTokenURI) external {
         require(artistWhitelist[msg.sender] == true, "not on the whitelist!");
         _mintArtwork(_artworkTokenURI);
     }
 
     // used for creating more than one artworks
-    function mintArtwork (string[] memory _artworkTokenURI) external {
+    function mintArtwork(string[] memory _artworkTokenURI) public {
         require(artistWhitelist[msg.sender] == true, "not on the whitelist!");
         require(_artworkTokenURI.length <= maximumPiecePerMint, "exceeded maximum amount");
         for(uint i; i < _artworkTokenURI.length; ++i) {
@@ -281,7 +282,7 @@ contract CortexArt is CRC4Full {
         }
     }
 
-    function _mintArtwork (string _artworkTokenURI) internal {
+    function _mintArtwork(string _artworkTokenURI) internal {
         // Mint the token that represents ownership of the entire artwork    
         super._safeMint(msg.sender, expectedTokenSupply);
         // set the token URI for this art
