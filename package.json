@@ -6,10 +6,10 @@
   "author": "SteinsElite <lijunji@cortexlabs.ai>",
   "license": "MIT",
   "devDependencies": {
-    "@openzeppelin/contracts": "^3.2.0"
+    "@openzeppelin/contracts": "^4.4.1"
   },
   "dependencies": {
-    "@openzeppelin/upgrades": "^2.8.0",
+    "@openzeppelin/contracts-upgradeable": "^4.4.1",
     "@truffle/hdwallet-provider": "^1.2.0",
     "hardhat": "^2.6.1"
   }

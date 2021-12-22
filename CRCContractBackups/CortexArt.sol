@@ -1,13 +1,8 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "./CRC4/CRC4Full.sol";
 
-contract CortexArtERC721 is ERC721URIStorage {
-    using SafeMath for uint256;
-
+contract CortexArt is CRC4Full {
     // An event whenever the platform address is updated
     event PlatformAddressUpdated(
         address platformAddress
@@ -154,7 +149,7 @@ contract CortexArtERC721 is ERC721URIStorage {
         string memory _symbol, 
         uint256 _initialExpectedTokenSupply
     ) 
-        ERC721(_name, _symbol) 
+        CRC4Full(_name, _symbol) public 
     {
         // starting royalty amounts
         artistSecondSalePercentage = 10;
@@ -298,7 +293,7 @@ contract CortexArtERC721 is ERC721URIStorage {
     }
 
     // used for creating more than one artworks
-    function mintArtwork(string[] calldata _artworkTokenURI) external {
+    function mintArtwork(string[] memory _artworkTokenURI) external {
         require(artistWhitelist[msg.sender] == true, "not on the whitelist!");
         require(_artworkTokenURI.length <= maximumPiecePerMint, "exceeded maximum amount");
         for(uint i; i < _artworkTokenURI.length; ++i) {
@@ -314,7 +309,7 @@ contract CortexArtERC721 is ERC721URIStorage {
         // track the msg.sender address as the artist address for future royalties
         uniqueTokenCreators[expectedTokenSupply].push(msg.sender);
         expectedTokenSupply = expectedTokenSupply.add(1);
-        mintHistory[msg.sender].push(block.timestamp);
+        mintHistory[msg.sender].push(now);
     }
 
 
@@ -322,10 +317,10 @@ contract CortexArtERC721 is ERC721URIStorage {
     function openAuction(uint256 _tokenId, uint256 _prepTime, uint256 _auctionTime, uint256 _reservePrice) external {
         require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
         require(pendingBids[_tokenId].exists == false, "On sale!");
-        require(sellingState[_tokenId].auctionEndTime < block.timestamp, "There is an existing auction");
+        require(sellingState[_tokenId].auctionEndTime < now, "There is an existing auction");
         require(_prepTime <= maximumAuctionPreparingTime, "Exceed max preparing time");
         require(_auctionTime <= maximumAuctionPeriod, "Exceed max auction time!");
-        sellingState[_tokenId].auctionStartTime = block.timestamp + _prepTime;
+        sellingState[_tokenId].auctionStartTime = now + _prepTime;
         sellingState[_tokenId].auctionEndTime = sellingState[_tokenId].auctionStartTime + _auctionTime;
         sellingState[_tokenId].reservePrice = _reservePrice;
         emit AuctionCreated(_tokenId, sellingState[_tokenId].auctionStartTime, sellingState[_tokenId].auctionEndTime);
@@ -335,7 +330,7 @@ contract CortexArtERC721 is ERC721URIStorage {
     // Allow the owner to cancel the auction before it goes live
     function cancelAuction(uint256 _tokenId) external {
         require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
-        require(sellingState[_tokenId].auctionStartTime >= block.timestamp, "Too late!");
+        require(sellingState[_tokenId].auctionStartTime >= now, "Too late!");
         sellingState[_tokenId].auctionEndTime = 0;
         sellingState[_tokenId].auctionStartTime = 0;
         emit AuctionCancelled(_tokenId);
@@ -347,9 +342,9 @@ contract CortexArtERC721 is ERC721URIStorage {
         // cannot equal, don't allow bids of 0
         require(msg.value >= sellingState[_tokenId].reservePrice && msg.value > 0);
         // Check for auction expiring time
-        require(sellingState[_tokenId].auctionStartTime <= block.timestamp, "Auction hasn't started!");
+        require(sellingState[_tokenId].auctionStartTime <= now, "Auction hasn't started!");
         // Check for auction expiring time
-        require(sellingState[_tokenId].auctionEndTime >= block.timestamp, "Auction expired!");
+        require(sellingState[_tokenId].auctionEndTime >= now, "Auction expired!");
         // don't let owners/approved bid on their own tokens
         require(_isApprovedOrOwner(msg.sender, _tokenId) == false);
         // check if there's a high bid
@@ -389,7 +384,7 @@ contract CortexArtERC721 is ERC721URIStorage {
     // Allow anyone to accept the highest bid for a token
     function acceptBid(uint256 _tokenId) external {
         // can only be accepted when auction ended
-        require(sellingState[_tokenId].auctionEndTime <= block.timestamp);
+        require(sellingState[_tokenId].auctionEndTime <= now);
         // check if there's a bid to accept
         require(pendingBids[_tokenId].exists);
         // process the sale
@@ -411,8 +406,8 @@ contract CortexArtERC721 is ERC721URIStorage {
     function setSellingState(uint256 _tokenId, uint256 _buyPrice, uint256 _startTime, uint256 _endTime, uint256 _reservePrice) external {
         require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
         require(pendingBids[_tokenId].exists == false, "On sale!");
-        require(sellingState[_tokenId].auctionStartTime > block.timestamp || sellingState[_tokenId].auctionEndTime < block.timestamp, "There is an existing auction");
-        require(block.timestamp + maximumAuctionPreparingTime >= _startTime, "Exceed max preparing time");
+        require(sellingState[_tokenId].auctionStartTime > now || sellingState[_tokenId].auctionEndTime < now, "There is an existing auction");
+        require(now + maximumAuctionPreparingTime >= _startTime, "Exceed max preparing time");
         require(_startTime + maximumAuctionPeriod >= _endTime, "Exceed max auction time!");
         // set the buy price
         sellingState[_tokenId].buyPrice = _buyPrice;
@@ -489,7 +484,7 @@ contract CortexArtERC721 is ERC721URIStorage {
         // clear selling state
         sellingState[_tokenId] = SellingState(0, 0, 0, 0);
         // Transfer token to msg.sender
-        super.transferFrom(ownerOf(_tokenId), to, _tokenId);
+        _transferFrom(ownerOf(_tokenId), to, _tokenId);
         // Emit event
         emit TokenSale(_tokenId, saleAmount, to);
     }
@@ -497,14 +492,14 @@ contract CortexArtERC721 is ERC721URIStorage {
     function getTokenOnSale() external view returns(uint256[] memory tokenIds) {
         uint256 tokenCount = 0;
         for(uint256 i = 1; i < expectedTokenSupply; ++i) {
-            if(sellingState[i].buyPrice > 0 || sellingState[i].auctionEndTime > block.timestamp) {
+            if(sellingState[i].buyPrice > 0 || sellingState[i].auctionEndTime > now) {
                 ++tokenCount;
             }
         }
         tokenIds = new uint256[](tokenCount);
         tokenCount = 0;
         for(uint256 i = 1; i < expectedTokenSupply; ++i) {
-            if(sellingState[i].buyPrice > 0 || sellingState[i].auctionEndTime > block.timestamp) {
+            if(sellingState[i].buyPrice > 0 || sellingState[i].auctionEndTime > now) {
                 tokenIds[tokenCount] = i;
                 ++tokenCount;
             }
@@ -529,7 +524,7 @@ contract CortexArtERC721 is ERC721URIStorage {
 
         failedTransferCredits[msg.sender] = 0;
 
-        (bool successfulWithdraw, ) = msg.sender.call{value:amount}("");
+        bool successfulWithdraw = msg.sender.call.value(amount)("");
         require(successfulWithdraw);
     }
 
@@ -537,7 +532,7 @@ contract CortexArtERC721 is ERC721URIStorage {
     // Safely transfer funds and if fail then store that amount as credits for a later pull
     function safeFundsTransfer(address recipient, uint256 amount) internal {
         // attempt to send the funds to the recipient
-        (bool success, ) = recipient.call{value:amount, gas:2300}("");
+        bool success = recipient.call.value(amount).gas(2300)("");
         // if it failed, update their credit balance so they can pull it later
         if (success == false) {
             failedTransferCredits[recipient] = failedTransferCredits[recipient].add(amount);
@@ -546,7 +541,7 @@ contract CortexArtERC721 is ERC721URIStorage {
 
     
     // override transferFrom function
-    function transferFrom(address from, address to, uint256 tokenId) public override {
+    function transferFrom(address from, address to, uint256 tokenId) public {
         require(pendingBids[tokenId].exists == false, "Pending bid!");
         require(sellingState[tokenId].auctionEndTime == 0, "token on sale!");
         // prevent from unintended transfer
