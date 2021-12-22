@@ -112,7 +112,7 @@ contract CortexArtERC721 is ERC721URIStorage {
     uint256 public maximumAuctionPeriod = 7 days;
     // The maxium time before the auction go live
     uint256 public maximumAuctionPreparingTime = 3 days;
-    uint256 public maximumPiecePerMint = 20;
+    // uint256 public maximumPiecePerMint = 20;
     uint256 public maximumPiecePerCreator = 20;
     uint256 public maximumPiecePeriod = 30 days;
     mapping(address => uint256[]) mintHistory;
@@ -216,10 +216,10 @@ contract CortexArtERC721 is ERC721URIStorage {
     }
 
 
-    function setMaximumPiecePerMint(uint256 _maximumPiecePerMint) external onlyPlatform {
-        require(_maximumPiecePerMint > 0);
-        maximumPiecePerMint = _maximumPiecePerMint;
-    }
+    // function setMaximumPiecePerMint(uint256 _maximumPiecePerMint) external onlyPlatform {
+    //     require(_maximumPiecePerMint > 0);
+    //     maximumPiecePerMint = _maximumPiecePerMint;
+    // }
 
 
     function setMaximumPiecePerCreator(uint256 _maximumPiecePerCreator) external onlyPlatform {
@@ -293,6 +293,7 @@ contract CortexArtERC721 is ERC721URIStorage {
     // used for creating single artwork
     function mintArtwork(string calldata _artworkTokenURI) external {
         require(artistWhitelist[msg.sender] == true, "not on the whitelist!");
+        _checkExpires();
         require(mintHistory[msg.sender].length < maximumPiecePerCreator, "creator exceeded maximum amount");
         _mintArtwork(_artworkTokenURI);
     }
@@ -300,9 +301,31 @@ contract CortexArtERC721 is ERC721URIStorage {
     // used for creating more than one artworks
     function mintArtwork(string[] calldata _artworkTokenURI) external {
         require(artistWhitelist[msg.sender] == true, "not on the whitelist!");
-        require(_artworkTokenURI.length <= maximumPiecePerMint, "exceeded maximum amount");
+        // require(_artworkTokenURI.length <= maximumPiecePerMint, "exceeded maximum amount");
+        _checkExpires();
+        require(mintHistory[msg.sender].length + _artworkTokenURI.length <= maximumPiecePerCreator, "creator exceeded maximum amount");
         for(uint i; i < _artworkTokenURI.length; ++i) {
             _mintArtwork(_artworkTokenURI[i]);
+        }
+    }
+
+    function _checkExpires() internal {
+        uint256 numOfMintedItems = mintHistory[msg.sender].length;
+        uint256 numOfExpieredItems;
+        uint i;
+        for (i; i < numOfMintedItems; ++i) {
+            if (block.timestamp - mintHistory[msg.sender][i] >= maximumPiecePeriod) {
+                ++numOfExpieredItems;
+            }
+            else {
+                break;
+            }
+        }
+        for (i = 0; i < numOfMintedItems - numOfExpieredItems; ++i) {
+            mintHistory[msg.sender][i] = mintHistory[msg.sender][i + numOfExpieredItems];
+        }
+        for (i = 0; i < numOfExpieredItems; ++i) {
+            mintHistory[msg.sender].pop();
         }
     }
 
@@ -315,6 +338,41 @@ contract CortexArtERC721 is ERC721URIStorage {
         uniqueTokenCreators[expectedTokenSupply].push(msg.sender);
         expectedTokenSupply = expectedTokenSupply.add(1);
         mintHistory[msg.sender].push(block.timestamp);
+    }
+
+    
+    function setSellingStates
+    (
+        uint256[] calldata _tokenId, 
+        uint256[] calldata _buyPrice, 
+        uint256[] calldata _startTime, 
+        uint256[] calldata _endTime, 
+        uint256[] calldata _reservePrice
+    ) 
+        external 
+    {
+        for (uint i; i < _tokenId.length; ++i) {
+            setSellingState(_tokenId[i], _buyPrice[i], _startTime[i], _endTime[i], _reservePrice[i]);
+        }
+    }
+
+
+    function setSellingState(uint256 _tokenId, uint256 _buyPrice, uint256 _startTime, uint256 _endTime, uint256 _reservePrice) public {
+        require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
+        require(pendingBids[_tokenId].exists == false, "On sale!");
+        if (_startTime != 0 || _endTime != 0) {
+            require(sellingState[_tokenId].auctionStartTime > block.timestamp || sellingState[_tokenId].auctionEndTime < block.timestamp, "There is an existing auction");
+            require(block.timestamp + maximumAuctionPreparingTime >= _startTime, "Exceed max preparing time");
+            require(_startTime + maximumAuctionPeriod >= _endTime, "Exceed max auction time!");
+            sellingState[_tokenId] = SellingState(_buyPrice, _reservePrice, _startTime, _endTime);
+            emit AuctionCreated(_tokenId, sellingState[_tokenId].auctionStartTime, sellingState[_tokenId].auctionEndTime);
+        }
+        else {
+            sellingState[_tokenId] = SellingState(_buyPrice, 0, 0, 0);
+        emit AuctionCancelled(_tokenId);
+        }
+        // emit event
+        emit BuyPriceSet(_tokenId, _buyPrice);
     }
 
 
@@ -405,23 +463,6 @@ contract CortexArtERC721 is ERC721URIStorage {
         sellingState[_tokenId].buyPrice = _buyPrice;
         // emit event
         emit BuyPriceSet(_tokenId, _buyPrice);
-    }
-
-
-    function setSellingState(uint256 _tokenId, uint256 _buyPrice, uint256 _startTime, uint256 _endTime, uint256 _reservePrice) external {
-        require(_isApprovedOrOwner(msg.sender, _tokenId), "Not the owner!");
-        require(pendingBids[_tokenId].exists == false, "On sale!");
-        require(sellingState[_tokenId].auctionStartTime > block.timestamp || sellingState[_tokenId].auctionEndTime < block.timestamp, "There is an existing auction");
-        require(block.timestamp + maximumAuctionPreparingTime >= _startTime, "Exceed max preparing time");
-        require(_startTime + maximumAuctionPeriod >= _endTime, "Exceed max auction time!");
-        // set the buy price
-        sellingState[_tokenId].buyPrice = _buyPrice;
-        sellingState[_tokenId].auctionStartTime = _startTime;
-        sellingState[_tokenId].auctionEndTime = _endTime;
-        sellingState[_tokenId].reservePrice = _reservePrice;
-        // emit event
-        emit BuyPriceSet(_tokenId, _buyPrice);
-        emit AuctionCreated(_tokenId, sellingState[_tokenId].auctionStartTime, sellingState[_tokenId].auctionEndTime);
     }
 
 
