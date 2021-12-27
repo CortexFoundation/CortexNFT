@@ -174,30 +174,14 @@ contract CortexArtERC721 is ERC721URIStorage {
         _;
     }
 
+    function test() external pure returns (uint256) {
+        return 1;
+    }
+
 
     // whitelist an address as a artwork creator
     function whitelistUser(address _userAddr, bool _true) external onlyPlatform {
         artistWhitelist[_userAddr] = _true;
-    }
-
-
-    // reserve a tokenID and layer count for a _creator. Define a platform royalty percentage per art piece (some pieces have higher or lower amount)
-    function whitelistTokenForCreator(address _creator, uint256 _masterTokenId, uint256 _layerCount, 
-        uint256 _platformFirstSalePercentage, uint256 _platformSecondSalePercentage) external onlyPlatform {
-        require(artistWhitelist[_creator] == true, "Creator not on the artist whitelist!");
-        // the tokenID we're reserving must be the current expected token supply
-        require(_masterTokenId == expectedTokenSupply);
-        // Async pieces must have at least 1 layer
-        // require (_layerCount > 0);
-        // reserve the tokenID for this _creator
-        creatorWhitelist[_masterTokenId] = WhitelistReservation(_creator, _layerCount);
-        // increase the expected token supply
-        expectedTokenSupply = _masterTokenId.add(_layerCount).add(1);
-        // define the platform percentages for this token here
-        platformFirstSalePercentages[_masterTokenId] = _platformFirstSalePercentage;
-        platformSecondSalePercentages[_masterTokenId] = _platformSecondSalePercentage;
-
-        emit CreatorWhitelisted(_masterTokenId, _layerCount, _creator);
     }
 
 
