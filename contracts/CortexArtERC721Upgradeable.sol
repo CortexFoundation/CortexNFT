@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract CortexArtERC721 is ERC721URIStorage {
+contract CortexArtERC721Upgradeable is Initializable, ERC721URIStorageUpgradeable {
     using SafeMath for uint256;
 
     // An event whenever the platform address is updated
@@ -142,14 +143,16 @@ contract CortexArtERC721 is ERC721URIStorage {
     address public platformAddress;
 
 
-    constructor
+    function initialize
     (
         string memory _name, 
         string memory _symbol, 
         uint256 _initialExpectedTokenSupply
     ) 
-        ERC721(_name, _symbol) 
+        public initializer
     {
+        __ERC721URIStorage_init();
+        __ERC721_init_unchained(_name, _symbol);
         // starting royalty amounts
         artistSecondSalePercentage = 10;
         // intitialize the minimum bid increase percent
