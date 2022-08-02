@@ -1,11 +1,16 @@
-build/
-js/artworkAbi.json
-js/account.json
+.idea
+.vscode
+
+
 node_modules
-.secret
-# OpenZeppelin
-.openzeppelin/.session
-.openzeppelin/dev-*.json
-*.DS_store
-cache/
-artifacts/
+package-lock.json
+.env
+coverage
+coverage.json
+typechain
+typechain-types
+
+#Hardhat files
+cache
+artifacts
+

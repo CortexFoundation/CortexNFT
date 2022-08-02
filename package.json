@@ -1,21 +1,25 @@
 {
-  "name": "CortexNFT",
+  "name": "nft_platform",
   "version": "1.0.0",
+  "description": "",
   "main": "index.js",
-  "repository": "git@github.com:CortexFoundation/CortexNFT.git",
-  "author": "SteinsElite <lijunji@cortexlabs.ai>",
-  "license": "MIT",
-  "devDependencies": {
-    "@nomiclabs/hardhat-ethers": "^2.0.3",
-    "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@openzeppelin/contracts": "^4.4.1",
-    "chai": "^4.3.4",
-    "ethereum-waffle": "^3.4.0",
-    "ethers": "^5.5.2",
-    "hardhat": "^2.8.0"
+  "scripts": {
+    "prettier": "prettier --write 'contracts/**/*.sol'"
   },
-  "dependencies": {
-    "@openzeppelin/contracts-upgradeable": "^4.4.1",
-    "@truffle/hdwallet-provider": "^1.2.0"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CortexFoundation/CortexNFT.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/CortexFoundation/CortexNFT/issues"
+  },
+  "homepage": "https://github.com/CortexFoundation/CortexNFT#readme",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^1.0.2",
+    "hardhat": "^2.10.1",
+    "prettier": "^2.7.1",
+    "prettier-plugin-solidity": "^1.0.0-dev.23"
   }
 }
