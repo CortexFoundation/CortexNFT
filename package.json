@@ -1,10 +1,11 @@
 {
-  "name": "nft_platform",
+  "name": "cortexnft",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
   "scripts": {
-    "prettier": "prettier --write 'contracts/**/*.sol'"
+    "prettier": "prettier --write 'contracts/**/*.sol'",
+    "size": "npx hardhat size-contracts",
+    "rinkeby": "npx hardhat run scripts/deploy.ts --network rinkeby"
   },
   "repository": {
     "type": "git",
@@ -16,10 +17,16 @@
     "url": "https://github.com/CortexFoundation/CortexNFT/issues"
   },
   "homepage": "https://github.com/CortexFoundation/CortexNFT#readme",
+  "description": "",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^1.0.2",
+    "dotenv": "^16.0.1",
     "hardhat": "^2.10.1",
+    "hardhat-contract-sizer": "^2.6.1",
     "prettier": "^2.7.1",
     "prettier-plugin-solidity": "^1.0.0-dev.23"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.4.1"
   }
 }

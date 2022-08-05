@@ -1,13 +1,14 @@
-# Sample Hardhat Project
+# dev
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+before deploy, create the .dev file in root folder
+include:
 
-Try running some of the following tasks:
-
-```shell
-npx hardhat help
-npx hardhat test
-GAS_REPORT=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.js
 ```
+NFT_ADDRESS="..."
+ALCHEMY_KEY="..."
+PRIVATE_KEY="..."
+```
+
+
+
+
